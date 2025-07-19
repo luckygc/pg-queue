@@ -5,10 +5,10 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.github.luckygc</groupId>
-	<artifactId>java-template</artifactId>
-	<version>1.2.0</version>
-	<name>java-template</name>
-	<description>java-template</description>
+	<artifactId>pg-queue</artifactId>
+	<version>0.0.1</version>
+	<name>pg-queue</name>
+	<description>pg-queue</description>
 
 	<licenses>
 		<license>
