@@ -97,4 +97,13 @@ public class MessageManager implements MessagePusher, MessagePuller {
     public List<MessageEntity> pull(long pullCount) {
         return queueDao.findWaitHandleMessageEntities(queueConfig.getTopic(), pullCount);
     }
+
+    private void handle() {
+        Optional<MessageEntity> messageEntityOptional = pull();
+        if (messageEntityOptional.isEmpty()) {
+            return;
+        }
+
+
+    }
 }
