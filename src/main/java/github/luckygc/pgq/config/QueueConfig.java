@@ -2,6 +2,7 @@ package github.luckygc.pgq.config;
 
 import github.luckygc.pgq.api.MessageHandler;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 import org.springframework.util.StringUtils;
 
@@ -110,6 +111,19 @@ public class QueueConfig {
 
     public Duration getRetentionTime() {
         return retentionTime;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof QueueConfig that)) {
+            return false;
+        }
+        return Objects.equals(topic, that.topic);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(topic);
     }
 
     public static class Builder {
