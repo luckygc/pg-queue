@@ -11,7 +11,21 @@ import org.junit.jupiter.api.Test;
 @DisplayName("队列配置测试")
 public class QueueConfigTest {
 
-    private final MessageHandler mockHandler = message -> true;
+    private static class TestMessage {
+
+    }
+
+    private final MessageHandler<TestMessage> mockHandler = new MessageHandler<TestMessage>() {
+        @Override
+        public Class<TestMessage> getMessageCls() {
+            return TestMessage.class;
+        }
+
+        @Override
+        public boolean handle(TestMessage message) {
+            return true;
+        }
+    };
 
     @Test
     @DisplayName("使用Builder创建完整配置")
@@ -25,7 +39,8 @@ public class QueueConfigTest {
         Duration retentionTime = Duration.ofHours(12);
 
         // When
-        QueueConfig config = new QueueConfig.Builder().topic(topic).maxAttempt(maxAttempt).firstProcessDelay(firstDelay)
+        QueueConfig<TestMessage> config = new QueueConfig.Builder<TestMessage>().topic(topic).maxAttempt(maxAttempt)
+                .firstProcessDelay(firstDelay)
                 .nextProcessDelay(nextDelay).messageHandler(mockHandler).handlerCount(handlerCount)
                 .retentionTime(retentionTime).build();
 
@@ -47,7 +62,8 @@ public class QueueConfigTest {
         String topic = "minimal-topic";
 
         // When
-        QueueConfig config = new QueueConfig.Builder().topic(topic).messageHandler(mockHandler).build();
+        QueueConfig<TestMessage> config = new QueueConfig.Builder<TestMessage>().topic(topic)
+                .messageHandler(mockHandler).build();
 
         // Then
         assertThat(config.getTopic()).isEqualTo(topic);
@@ -63,7 +79,8 @@ public class QueueConfigTest {
     @DisplayName("topic为空时抛出异常")
     void testEmptyTopicThrowsException() {
         // When & Then
-        assertThatThrownBy(() -> new QueueConfig.Builder().topic("").messageHandler(mockHandler).build()).isInstanceOf(
+        assertThatThrownBy(() -> new QueueConfig.Builder<TestMessage>().topic("").messageHandler(mockHandler)
+                .build()).isInstanceOf(
                 IllegalArgumentException.class).hasMessage("topic不能为空");
     }
 
@@ -72,7 +89,8 @@ public class QueueConfigTest {
     void testNullTopicThrowsException() {
         // When & Then
         assertThatThrownBy(
-                () -> new QueueConfig.Builder().topic(null).messageHandler(mockHandler).build()).isInstanceOf(
+                () -> new QueueConfig.Builder<TestMessage>().topic(null).messageHandler(mockHandler)
+                        .build()).isInstanceOf(
                 IllegalArgumentException.class).hasMessage("topic不能为空");
     }
 
@@ -80,7 +98,8 @@ public class QueueConfigTest {
     @DisplayName("maxAttempt小于1时抛出异常")
     void testInvalidMaxAttemptThrowsException() {
         // When & Then
-        assertThatThrownBy(() -> new QueueConfig.Builder().topic("test-topic").maxAttempt(0).messageHandler(mockHandler)
+        assertThatThrownBy(() -> new QueueConfig.Builder<TestMessage>().topic("test-topic").maxAttempt(0)
+                .messageHandler(mockHandler)
                 .build()).isInstanceOf(IllegalArgumentException.class).hasMessage("maxAttempt不能小于1");
     }
 
@@ -89,7 +108,8 @@ public class QueueConfigTest {
     void testNullMessageHandlerThrowsException() {
         // When & Then
         assertThatThrownBy(
-                () -> new QueueConfig.Builder().topic("test-topic").messageHandler(null).build()).isInstanceOf(
+                () -> new QueueConfig.Builder<TestMessage>().topic("test-topic").messageHandler(null)
+                        .build()).isInstanceOf(
                 IllegalArgumentException.class).hasMessage("messageHandler不能为null");
     }
 
@@ -97,11 +117,11 @@ public class QueueConfigTest {
     @DisplayName("handlerCount小于1时抛出异常")
     void testInvalidHandlerCountThrowsException() {
         // When & Then
-        assertThatThrownBy(() -> new QueueConfig.Builder()
-                        .topic("test-topic")
-                        .messageHandler(mockHandler)
-                        .handlerCount(0)
-                        .build())
+        assertThatThrownBy(() -> new QueueConfig.Builder<TestMessage>()
+                .topic("test-topic")
+                .messageHandler(mockHandler)
+                .handlerCount(0)
+                .build())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("handlerCount不能小于1");
     }
@@ -110,7 +130,8 @@ public class QueueConfigTest {
     @DisplayName("测试firstProcessDelay为null时的Optional处理")
     void testOptionalFirstProcessDelay() {
         // When
-        QueueConfig config = new QueueConfig.Builder().topic("optional-test").messageHandler(mockHandler).build();
+        QueueConfig<TestMessage> config = new QueueConfig.Builder<TestMessage>().topic("optional-test")
+                .messageHandler(mockHandler).build();
 
         // Then
         assertThat(config.getFirstProcessDelay()).isNotPresent();
@@ -123,7 +144,7 @@ public class QueueConfigTest {
         Duration customRetentionTime = Duration.ofHours(6);
 
         // When
-        QueueConfig config = new QueueConfig.Builder()
+        QueueConfig<TestMessage> config = new QueueConfig.Builder<TestMessage>()
                 .topic("retention-test")
                 .messageHandler(mockHandler)
                 .retentionTime(customRetentionTime)
@@ -137,7 +158,7 @@ public class QueueConfigTest {
     @DisplayName("测试retentionTime默认值")
     void testDefaultRetentionTime() {
         // When
-        QueueConfig config = new QueueConfig.Builder()
+        QueueConfig<TestMessage> config = new QueueConfig.Builder<TestMessage>()
                 .topic("default-retention-test")
                 .messageHandler(mockHandler)
                 .build();
@@ -158,7 +179,8 @@ public class QueueConfigTest {
         Duration retentionTime = Duration.ofHours(8);
 
         // When
-        QueueConfig config = new QueueConfig.Builder().topic(topic).maxAttempt(maxAttempt).firstProcessDelay(firstDelay)
+        QueueConfig<TestMessage> config = new QueueConfig.Builder<TestMessage>().topic(topic).maxAttempt(maxAttempt)
+                .firstProcessDelay(firstDelay)
                 .nextProcessDelay(nextDelay).messageHandler(mockHandler).handlerCount(handlerCount)
                 .retentionTime(retentionTime).build();
 
