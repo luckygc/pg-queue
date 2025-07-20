@@ -2,7 +2,7 @@ package github.luckygc.pgq.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import github.luckygc.pgq.MessageEntity;
+import github.luckygc.pgq.model.MessageEntity;
 import github.luckygc.pgq.PublishException;
 import github.luckygc.pgq.api.QueueProducer;
 import java.util.Objects;

@@ -1,6 +1,6 @@
 package github.luckygc.pgq.impl;
 
-import github.luckygc.pgq.MessageEntity;
+import github.luckygc.pgq.model.MessageEntity;
 import github.luckygc.pgq.api.QueueConsumer;
 import java.time.LocalDateTime;
 import java.util.List;

@@ -1,4 +1,4 @@
-package github.luckygc.pgq;
+package github.luckygc.pgq.model;
 
 import java.time.LocalDateTime;
 

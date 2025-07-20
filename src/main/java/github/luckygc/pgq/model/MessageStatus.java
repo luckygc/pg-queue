@@ -1,4 +1,4 @@
-package github.luckygc.pgq;
+package github.luckygc.pgq.model;
 
 public enum MessageStatus {
     PENDING,
