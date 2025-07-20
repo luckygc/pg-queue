@@ -1,0 +1,12 @@
+package github.luckygc.pgq;
+
+public class PushException extends RuntimeException {
+
+    public PushException(String message) {
+        super(message);
+    }
+
+    public PushException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
