@@ -5,6 +5,8 @@ import github.luckygc.pgq.model.MessageStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 public class QueueDao {
 
@@ -20,8 +22,11 @@ public class QueueDao {
                 .update();
     }
 
+    @Transactional(rollbackFor = Throwable.class, timeout = 30)
     public List<MessageEntity> findWaitHandleMessageEntities(String topic, long limit) {
         LocalDateTime now = LocalDateTime.now();
+
+        new TransactionTemplate();
 
         List<MessageEntity> list = jdbcClient.sql(Sqls.PULL_WAIT_HANDLE_FROM_SIMPLE_QUEUE)
                 .param("topic", topic)
