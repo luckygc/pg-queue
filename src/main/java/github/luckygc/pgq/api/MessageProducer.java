@@ -1,6 +1,6 @@
 package github.luckygc.pgq.api;
 
-public interface QueueProducer {
+public interface MessageProducer {
 
     void publish(Object message);
 }

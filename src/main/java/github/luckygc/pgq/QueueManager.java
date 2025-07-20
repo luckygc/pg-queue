@@ -13,7 +13,7 @@ public class QueueManager {
     private final QueueDao queueDao;
     private final ObjectMapper objectMapper;
     private final Set<QueueConfig> queueConfigs = new LinkedHashSet<>();
-    private final List<QueueHandler> consumers = new ArrayList<>();
+    private final List<MessageManager> messageManagers = new ArrayList<>();
 
     public QueueManager(JdbcClient jdbcClient, ObjectMapper objectMapper) {
         this.queueDao = new QueueDao(jdbcClient);
@@ -26,7 +26,7 @@ public class QueueManager {
             return;
         }
 
-        QueueHandler queueHandler = new QueueHandler(queueConfig, this.queueDao,objectMapper);
-        consumers.add(queueHandler);
+        MessageManager queueHandler = new MessageManager(queueConfig, this.queueDao,objectMapper);
+        messageManagers.add(queueHandler);
     }
 }
