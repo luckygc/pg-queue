@@ -41,6 +41,11 @@ public class QueueConfig {
      */
     private final Duration retentionTime;
 
+    /**
+     * 一次拉取消息的数量,默认1
+     */
+    private final int pullCount;
+
     private QueueConfig(Builder builder) {
         if (!StringUtils.hasText(builder.topic)) {
             throw new IllegalArgumentException("topic不能为空");
@@ -82,6 +87,14 @@ public class QueueConfig {
             retentionTime = Duration.ofDays(1);
         } else {
             retentionTime = builder.retentionTime;
+        }
+
+        if (builder.pullCount == null) {
+            pullCount = 1;
+        } else if (builder.pullCount < 1) {
+            throw new IllegalArgumentException("pullCount不能小于1");
+        } else {
+            pullCount = builder.pullCount;
         }
     }
 
@@ -135,6 +148,7 @@ public class QueueConfig {
         private MessageHandler messageHandler;
         private Integer handlerCount;
         private Duration retentionTime;
+        private Integer pullCount;
 
         public Builder topic(String topic) {
             this.topic = topic;
@@ -168,6 +182,11 @@ public class QueueConfig {
 
         public Builder retentionTime(Duration retentionTime) {
             this.retentionTime = retentionTime;
+            return this;
+        }
+
+        public Builder pullCount(int pullCount) {
+            this.pullCount = pullCount;
             return this;
         }
 
