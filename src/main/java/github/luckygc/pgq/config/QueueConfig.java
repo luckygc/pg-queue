@@ -44,7 +44,7 @@ public class QueueConfig {
     /**
      * 一次拉取消息的数量,默认1
      */
-    private final int pullCount;
+    private final long pullCount;
 
     private QueueConfig(Builder builder) {
         if (!StringUtils.hasText(builder.topic)) {
@@ -126,6 +126,10 @@ public class QueueConfig {
         return retentionTime;
     }
 
+    public long getPullCount() {
+        return pullCount;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof QueueConfig that)) {
@@ -148,14 +152,14 @@ public class QueueConfig {
         private MessageHandler messageHandler;
         private Integer handlerCount;
         private Duration retentionTime;
-        private Integer pullCount;
+        private Long pullCount;
 
         public Builder topic(String topic) {
             this.topic = topic;
             return this;
         }
 
-        public Builder maxAttempt(int maxAttempt) {
+        public Builder maxAttempt(Integer maxAttempt) {
             this.maxAttempt = maxAttempt;
             return this;
         }
@@ -175,7 +179,7 @@ public class QueueConfig {
             return this;
         }
 
-        public Builder handlerCount(int handlerCount) {
+        public Builder handlerCount(Integer handlerCount) {
             this.handlerCount = handlerCount;
             return this;
         }
@@ -185,7 +189,7 @@ public class QueueConfig {
             return this;
         }
 
-        public Builder pullCount(int pullCount) {
+        public Builder pullCount(Long pullCount) {
             this.pullCount = pullCount;
             return this;
         }
