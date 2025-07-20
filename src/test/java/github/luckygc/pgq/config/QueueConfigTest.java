@@ -11,9 +11,7 @@ import org.junit.jupiter.api.Test;
 @DisplayName("队列配置测试")
 public class QueueConfigTest {
 
-    private final MessageHandler mockHandler = message -> {
-        // Mock implementation
-    };
+    private final MessageHandler mockHandler = message -> true;
 
     @Test
     @DisplayName("使用Builder创建完整配置")

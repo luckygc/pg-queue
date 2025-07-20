@@ -20,14 +20,6 @@ public class MessageEntity {
 
     private Integer maxAttempt;
 
-    public static MessageEntity of() {
-        LocalDateTime now = LocalDateTime.now();
-        MessageEntity messageEntity = new MessageEntity();
-        messageEntity.setCreateTime(now);
-        messageEntity.setNextProcessTime(now);
-        return messageEntity;
-    }
-
     public Long getId() {
         return id;
     }
