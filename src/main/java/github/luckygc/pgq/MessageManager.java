@@ -2,7 +2,7 @@ package github.luckygc.pgq;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import github.luckygc.pgq.api.MessageProducer;
+import github.luckygc.pgq.api.MessagePusher;
 import github.luckygc.pgq.api.MessagePuller;
 import github.luckygc.pgq.config.QueueConfig;
 import github.luckygc.pgq.model.MessageEntity;
@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-public class MessageManager implements MessageProducer, MessagePuller {
+public class MessageManager implements MessagePusher, MessagePuller {
 
     private final QueueConfig queueConfig;
     private final QueueDao queueDao;
@@ -24,7 +24,7 @@ public class MessageManager implements MessageProducer, MessagePuller {
     }
 
     @Override
-    public void publish(Object message) {
+    public void push(Object message) {
         MessageEntity messageEntity = new MessageEntity();
         LocalDateTime now = LocalDateTime.now();
         messageEntity.setCreateTime(now);
