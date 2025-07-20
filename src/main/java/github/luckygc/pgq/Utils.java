@@ -11,21 +11,6 @@ public final class Utils {
     private Utils() {
     }
 
-    public static RowMapper<MessageEntity> messageEntityRowMapper() {
-        return (rs, rowNum) -> {
-            MessageEntity messageEntity = new MessageEntity();
-            messageEntity.setId(rs.getLong("id"));
-            messageEntity.setCreateTime(rs.getTimestamp("create_time").toLocalDateTime());
-            messageEntity.setTopic(rs.getString("topic"));
-            messageEntity.setPayload(rs.getString("payload"));
-            messageEntity.setStatus(MessageStatus.valueOf(rs.getString("status")));
-            messageEntity.setNextProcessTime(rs.getTimestamp("next_process_time").toLocalDateTime());
-            messageEntity.setAttempt(rs.getInt("attempt"));
-            messageEntity.setMaxAttempt(rs.getInt("max_attempt"));
-            return messageEntity;
-        };
-    }
-
     public static Map<String, Object> messageEntityToMap(MessageEntity messageEntity) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", messageEntity.getId());
