@@ -37,11 +37,6 @@ public class QueueConfig<M> {
     private final int handlerCount;
 
     /**
-     * 保留时间,默认一天
-     */
-    private final Duration retentionTime;
-
-    /**
      * 一次拉取消息的数量,默认1
      */
     private final long pullCount;
@@ -83,12 +78,6 @@ public class QueueConfig<M> {
             handlerCount = builder.handlerCount;
         }
 
-        if (builder.retentionTime == null) {
-            retentionTime = Duration.ofDays(1);
-        } else {
-            retentionTime = builder.retentionTime;
-        }
-
         if (builder.pullCount == null) {
             pullCount = 1;
         } else if (builder.pullCount < 1) {
@@ -122,10 +111,6 @@ public class QueueConfig<M> {
         return handlerCount;
     }
 
-    public Duration getRetentionTime() {
-        return retentionTime;
-    }
-
     public long getPullCount() {
         return pullCount;
     }
@@ -151,7 +136,6 @@ public class QueueConfig<M> {
         private Duration nexProcessDelay;
         private MessageHandler<T> messageHandler;
         private Integer handlerCount;
-        private Duration retentionTime;
         private Long pullCount;
 
         public Builder<T> topic(String topic) {
@@ -181,11 +165,6 @@ public class QueueConfig<M> {
 
         public Builder<T> handlerCount(Integer handlerCount) {
             this.handlerCount = handlerCount;
-            return this;
-        }
-
-        public Builder<T> retentionTime(Duration retentionTime) {
-            this.retentionTime = retentionTime;
             return this;
         }
 
