@@ -9,7 +9,7 @@ import org.springframework.util.StringUtils;
 /**
  * 队列配置
  */
-public class QueueConfig {
+public class QueueConfig<M> {
 
     /**
      * 主题
@@ -30,7 +30,7 @@ public class QueueConfig {
     /**
      * 消息处理器
      */
-    private final MessageHandler messageHandler;
+    private final MessageHandler<M> messageHandler;
     /**
      * 处理器数量
      */
@@ -46,7 +46,7 @@ public class QueueConfig {
      */
     private final long pullCount;
 
-    private QueueConfig(Builder builder) {
+    private QueueConfig(Builder<M> builder) {
         if (!StringUtils.hasText(builder.topic)) {
             throw new IllegalArgumentException("topic不能为空");
         }
@@ -114,7 +114,7 @@ public class QueueConfig {
         return nextProcessDelay;
     }
 
-    public MessageHandler getMessageHandler() {
+    public MessageHandler<M> getMessageHandler() {
         return messageHandler;
     }
 
@@ -132,7 +132,7 @@ public class QueueConfig {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof QueueConfig that)) {
+        if (!(o instanceof QueueConfig<?> that)) {
             return false;
         }
         return Objects.equals(topic, that.topic);
@@ -143,59 +143,59 @@ public class QueueConfig {
         return Objects.hashCode(topic);
     }
 
-    public static class Builder {
+    public static class Builder<T> {
 
         private String topic;
         private Integer maxAttempt;
         private Duration firstProcessDelay;
         private Duration nexProcessDelay;
-        private MessageHandler messageHandler;
+        private MessageHandler<T> messageHandler;
         private Integer handlerCount;
         private Duration retentionTime;
         private Long pullCount;
 
-        public Builder topic(String topic) {
+        public Builder<T> topic(String topic) {
             this.topic = topic;
             return this;
         }
 
-        public Builder maxAttempt(Integer maxAttempt) {
+        public Builder<T> maxAttempt(Integer maxAttempt) {
             this.maxAttempt = maxAttempt;
             return this;
         }
 
-        public Builder firstProcessDelay(Duration firstProcessDelay) {
+        public Builder<T> firstProcessDelay(Duration firstProcessDelay) {
             this.firstProcessDelay = firstProcessDelay;
             return this;
         }
 
-        public Builder nextProcessDelay(Duration nextProcessDelay) {
+        public Builder<T> nextProcessDelay(Duration nextProcessDelay) {
             this.nexProcessDelay = nextProcessDelay;
             return this;
         }
 
-        public Builder messageHandler(MessageHandler messageHandler) {
+        public Builder<T> messageHandler(MessageHandler<T> messageHandler) {
             this.messageHandler = messageHandler;
             return this;
         }
 
-        public Builder handlerCount(Integer handlerCount) {
+        public Builder<T> handlerCount(Integer handlerCount) {
             this.handlerCount = handlerCount;
             return this;
         }
 
-        public Builder retentionTime(Duration retentionTime) {
+        public Builder<T> retentionTime(Duration retentionTime) {
             this.retentionTime = retentionTime;
             return this;
         }
 
-        public Builder pullCount(Long pullCount) {
+        public Builder<T> pullCount(Long pullCount) {
             this.pullCount = pullCount;
             return this;
         }
 
-        public QueueConfig build() {
-            return new QueueConfig(this);
+        public QueueConfig<T> build() {
+            return new QueueConfig<>(this);
         }
     }
 }

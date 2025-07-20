@@ -1,6 +1,6 @@
 package github.luckygc.pgq.api;
 
-public interface MessageHandler {
+public interface MessageHandler<M> {
 
-    boolean handle(String message);
+    boolean handle(M message);
 }
