@@ -24,10 +24,12 @@ public class QueueConfigTest {
         Duration firstDelay = Duration.ofSeconds(30);
         Duration nextDelay = Duration.ofMinutes(5);
         int handlerCount = 2;
+        Duration retentionTime = Duration.ofHours(12);
 
         // When
         QueueConfig config = new QueueConfig.Builder().topic(topic).maxAttempt(maxAttempt).firstProcessDelay(firstDelay)
-                .nextProcessDelay(nextDelay).messageHandler(mockHandler).handlerCount(handlerCount).build();
+                .nextProcessDelay(nextDelay).messageHandler(mockHandler).handlerCount(handlerCount)
+                .retentionTime(retentionTime).build();
 
         // Then
         assertThat(config.getTopic()).isEqualTo(topic);
@@ -37,6 +39,7 @@ public class QueueConfigTest {
         assertThat(config.getNextProcessDelay()).isEqualTo(nextDelay);
         assertThat(config.getMessageHandler()).isEqualTo(mockHandler);
         assertThat(config.getHandlerCount()).isEqualTo(handlerCount);
+        assertThat(config.getRetentionTime()).isEqualTo(retentionTime);
     }
 
     @Test
@@ -55,6 +58,7 @@ public class QueueConfigTest {
         assertThat(config.getNextProcessDelay()).isEqualTo(Duration.ofMinutes(10)); // 默认值
         assertThat(config.getMessageHandler()).isEqualTo(mockHandler);
         assertThat(config.getHandlerCount()).isEqualTo(1); // 默认值
+        assertThat(config.getRetentionTime()).isEqualTo(Duration.ofDays(1)); // 默认值
     }
 
     @Test
@@ -115,6 +119,36 @@ public class QueueConfigTest {
     }
 
     @Test
+    @DisplayName("测试自定义retentionTime")
+    void testCustomRetentionTime() {
+        // Given
+        Duration customRetentionTime = Duration.ofHours(6);
+
+        // When
+        QueueConfig config = new QueueConfig.Builder()
+                .topic("retention-test")
+                .messageHandler(mockHandler)
+                .retentionTime(customRetentionTime)
+                .build();
+
+        // Then
+        assertThat(config.getRetentionTime()).isEqualTo(customRetentionTime);
+    }
+
+    @Test
+    @DisplayName("测试retentionTime默认值")
+    void testDefaultRetentionTime() {
+        // When
+        QueueConfig config = new QueueConfig.Builder()
+                .topic("default-retention-test")
+                .messageHandler(mockHandler)
+                .build();
+
+        // Then
+        assertThat(config.getRetentionTime()).isEqualTo(Duration.ofDays(1));
+    }
+
+    @Test
     @DisplayName("测试所有getter方法")
     void testAllGetters() {
         // Given
@@ -123,15 +157,17 @@ public class QueueConfigTest {
         Duration firstDelay = Duration.ofMinutes(1);
         Duration nextDelay = Duration.ofMinutes(15);
         int handlerCount = 4;
+        Duration retentionTime = Duration.ofHours(8);
 
         // When
         QueueConfig config = new QueueConfig.Builder().topic(topic).maxAttempt(maxAttempt).firstProcessDelay(firstDelay)
-                .nextProcessDelay(nextDelay).messageHandler(mockHandler).handlerCount(handlerCount).build();
+                .nextProcessDelay(nextDelay).messageHandler(mockHandler).handlerCount(handlerCount)
+                .retentionTime(retentionTime).build();
 
         // Then
         assertThat(config).extracting(QueueConfig::getTopic, QueueConfig::getMaxAttempt,
                         c -> c.getFirstProcessDelay().orElse(null), QueueConfig::getNextProcessDelay,
-                        QueueConfig::getMessageHandler, QueueConfig::getHandlerCount)
-                .containsExactly(topic, maxAttempt, firstDelay, nextDelay, mockHandler, handlerCount);
+                        QueueConfig::getMessageHandler, QueueConfig::getHandlerCount, QueueConfig::getRetentionTime)
+                .containsExactly(topic, maxAttempt, firstDelay, nextDelay, mockHandler, handlerCount, retentionTime);
     }
 }

@@ -35,6 +35,11 @@ public class QueueConfig {
      */
     private final int handlerCount;
 
+    /**
+     * 保留时间,默认一天
+     */
+    private final Duration retentionTime;
+
     private QueueConfig(Builder builder) {
         if (!StringUtils.hasText(builder.topic)) {
             throw new IllegalArgumentException("topic不能为空");
@@ -71,6 +76,12 @@ public class QueueConfig {
         } else {
             handlerCount = builder.handlerCount;
         }
+
+        if (builder.retentionTime == null) {
+            retentionTime = Duration.ofDays(1);
+        } else {
+            retentionTime = builder.retentionTime;
+        }
     }
 
     public String getTopic() {
@@ -97,6 +108,10 @@ public class QueueConfig {
         return handlerCount;
     }
 
+    public Duration getRetentionTime() {
+        return retentionTime;
+    }
+
     public static class Builder {
 
         private String topic;
@@ -105,6 +120,7 @@ public class QueueConfig {
         private Duration nexProcessDelay;
         private MessageHandler messageHandler;
         private Integer handlerCount;
+        private Duration retentionTime;
 
         public Builder topic(String topic) {
             this.topic = topic;
@@ -133,6 +149,11 @@ public class QueueConfig {
 
         public Builder handlerCount(int handlerCount) {
             this.handlerCount = handlerCount;
+            return this;
+        }
+
+        public Builder retentionTime(Duration retentionTime) {
+            this.retentionTime = retentionTime;
             return this;
         }
 
