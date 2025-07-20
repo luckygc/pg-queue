@@ -1,10 +1,8 @@
 package github.luckygc.pgq;
 
 import github.luckygc.pgq.model.MessageEntity;
-import github.luckygc.pgq.model.MessageStatus;
 import java.util.HashMap;
 import java.util.Map;
-import org.springframework.jdbc.core.RowMapper;
 
 public final class Utils {
 
