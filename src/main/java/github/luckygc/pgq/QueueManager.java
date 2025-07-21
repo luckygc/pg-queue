@@ -11,15 +11,15 @@ public class QueueManager {
 
     private final QueueDao queueDao;
     private final ObjectMapper objectMapper;
-    private final Map<QueueConfig, MessageManager> messageManagers = new ConcurrentHashMap<>();
+    private final Map<QueueConfig<?>, MessageManager<?>> messageManagers = new ConcurrentHashMap<>();
 
     public QueueManager(JdbcClient jdbcClient, ObjectMapper objectMapper) {
         this.queueDao = new QueueDao(jdbcClient);
         this.objectMapper = objectMapper;
     }
 
-    public MessagePusher registerQueueConfig(QueueConfig queueConfig) {
+    public MessagePusher<?> registerQueueConfig(QueueConfig<?> queueConfig) {
         return messageManagers.computeIfAbsent(queueConfig,
-                conf -> new MessageManager(queueConfig, this.queueDao, objectMapper));
+                conf -> new MessageManager<>(queueConfig, this.queueDao, objectMapper));
     }
 }
