@@ -42,7 +42,7 @@ public class PgQueueImpl<M> implements PgQueue<M> {
         }
         semaphore = new Semaphore(handlerCount);
 
-        scheduler.scheduleAtFixedRate(this::tryStartPollingAsync, 5, 10 * 60, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::tryStartPollingAsync, 1, 10 * 60, TimeUnit.SECONDS);
     }
 
     @Override
@@ -57,17 +57,7 @@ public class PgQueueImpl<M> implements PgQueue<M> {
 
     @Override
     public void push(M message, int priority) {
-        MessageEntity messageEntity = new MessageEntity();
-        messageEntity.setTopic(config.getTopic());
-        LocalDateTime now = LocalDateTime.now();
-        messageEntity.setCreateTime(now);
-        messageEntity.setPayload(messageSerializer.serialize(message));
-        messageEntity.setMaxAttempt(config.getMaxAttempt());
-        messageEntity.setPriority(priority);
-
-        messageEntity.setStatus(MessageStatus.PENDING);
-        messageEntity.setAttempt(0);
-        messageEntity.setNextProcessTime(now.plus(config.getFirstProcessDelay()));
+        MessageEntity messageEntity = toMessageEntity(message, priority);
 
         queueDao.insertMessageEntity(messageEntity);
 
@@ -89,6 +79,8 @@ public class PgQueueImpl<M> implements PgQueue<M> {
         List<MessageEntity> entities = messages.stream().map(m -> toMessageEntity(m, priority))
                 .toList();
         queueDao.insertMessageEntities(entities);
+
+        tryStartPollingAsync();
     }
 
     private MessageEntity toMessageEntity(M message, int priority) {
