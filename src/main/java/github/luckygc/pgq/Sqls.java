@@ -37,7 +37,7 @@ public final class Sqls {
             """;
 
 
-    public static String PULL = """
+    public static final String PULL = """
             with messages (id) as (select id
                                    from pgq_message
                                    where topic = :topic
