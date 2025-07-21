@@ -2,6 +2,7 @@ package github.luckygc.pgq;
 
 import github.luckygc.pgq.api.MessageHandler;
 import github.luckygc.pgq.api.MessageSerializable;
+import github.luckygc.pgq.api.PgQueue;
 import github.luckygc.pgq.config.QueueConfig;
 import java.time.Duration;
 import org.springframework.jdbc.core.simple.JdbcClient;

@@ -2,6 +2,7 @@ package github.luckygc.pgq;
 
 import github.luckygc.pgq.api.MessageHandler;
 import github.luckygc.pgq.api.MessageSerializable;
+import github.luckygc.pgq.api.PgQueue;
 import github.luckygc.pgq.config.QueueConfig;
 import github.luckygc.pgq.model.MessageEntity;
 import github.luckygc.pgq.model.MessageStatus;

@@ -1,4 +1,4 @@
-package github.luckygc.pgq;
+package github.luckygc.pgq.api;
 
 import github.luckygc.pgq.config.QueueConfig;
 
