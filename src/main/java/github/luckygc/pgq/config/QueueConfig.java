@@ -1,15 +1,12 @@
 package github.luckygc.pgq.config;
 
-import github.luckygc.pgq.api.MessageHandler;
 import java.time.Duration;
-import java.util.Objects;
-import java.util.Optional;
 import org.springframework.util.StringUtils;
 
 /**
  * 队列配置
  */
-public class QueueConfig<M> {
+public class QueueConfig {
 
     /**
      * 主题
@@ -18,72 +15,59 @@ public class QueueConfig<M> {
     /**
      * 最大尝试次数,默认1
      */
-    private final int maxAttempt;
+    private int maxAttempt = 1;
     /**
      * 首次处理延迟,默认无延迟
      */
-    private final Duration firstProcessDelay;
+    private Duration firstProcessDelay = Duration.ZERO;
     /**
-     * 下一次处理延迟,默认十分钟
+     * 下一次处理延迟,默认一分钟
      */
-    private final Duration nextProcessDelay;
-    /**
-     * 消息处理器
-     */
-    private final MessageHandler<M> messageHandler;
-    /**
-     * 处理器数量
-     */
-    private final int handlerCount;
+    private Duration nextProcessDelay = Duration.ofMinutes(1);
 
     /**
-     * 一次拉取消息的数量,默认1
+     * 轮询间隔,默认一分钟
      */
-    private final long pullCount;
+    private Duration pollingInterval = Duration.ofMinutes(1);
 
-    private QueueConfig(Builder<M> builder) {
+    /**
+     * 一次拉取消息的数量,默认50
+     */
+    private long pullBatchSize = 50;
+
+    private QueueConfig(Builder builder) {
         if (!StringUtils.hasText(builder.topic)) {
             throw new IllegalArgumentException("topic不能为空");
         }
 
         topic = builder.topic;
 
-        if (builder.maxAttempt == null) {
-            maxAttempt = 1;
-        } else if (builder.maxAttempt < 1) {
-            throw new IllegalArgumentException("maxAttempt不能小于1");
-        } else {
+        if (builder.maxAttempt != null) {
             maxAttempt = builder.maxAttempt;
         }
 
-        firstProcessDelay = builder.firstProcessDelay;
+        if (maxAttempt < 1) {
+            throw new IllegalArgumentException("maxAttempt不能小于1");
+        }
 
-        if (builder.nexProcessDelay == null) {
-            nextProcessDelay = Duration.ofMinutes(10);
-        } else {
+        if (builder.firstProcessDelay != null) {
+            firstProcessDelay = builder.firstProcessDelay;
+        }
+
+        if (builder.nexProcessDelay != null) {
             nextProcessDelay = builder.nexProcessDelay;
         }
 
-        if (builder.messageHandler == null) {
-            throw new IllegalArgumentException("messageHandler不能为null");
+        if (builder.pollingInterval != null) {
+            pollingInterval = builder.pollingInterval;
         }
 
-        messageHandler = builder.messageHandler;
-
-        if (builder.handlerCount == null) {
-            handlerCount = 1;
-        } else if (builder.handlerCount < 1) {
-            throw new IllegalArgumentException("handlerCount不能小于1");
-        } else {
-            handlerCount = builder.handlerCount;
+        if (builder.pullBatchSize != null) {
+            pullBatchSize = builder.pullBatchSize;
         }
 
-        if (builder.pullCount == null) {
-            pullCount = 1;
-        } else if (builder.pullCount < 1) {
-            throw new IllegalArgumentException("pullCount不能小于1");
-        } else {
-            pullCount = builder.pullCount;
+        if (pullBatchSize < 1) {
+            throw new IllegalArgumentException("pullBatchSize不能小于1");
         }
     }
 
@@ -95,86 +79,63 @@ public class QueueConfig<M> {
         return maxAttempt;
     }
 
-    public Optional<Duration> getFirstProcessDelay() {
-        return Optional.ofNullable(firstProcessDelay);
+    public Duration getFirstProcessDelay() {
+        return firstProcessDelay;
     }
 
     public Duration getNextProcessDelay() {
         return nextProcessDelay;
     }
 
-    public MessageHandler<M> getMessageHandler() {
-        return messageHandler;
+    public long getPullBatchSize() {
+        return pullBatchSize;
     }
 
-    public int getHandlerCount() {
-        return handlerCount;
+    public Duration getPollingInterval() {
+        return pollingInterval;
     }
 
-    public long getPullCount() {
-        return pullCount;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof QueueConfig<?> that)) {
-            return false;
-        }
-        return Objects.equals(topic, that.topic);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(topic);
-    }
-
-    public static class Builder<T> {
+    public static class Builder {
 
         private String topic;
         private Integer maxAttempt;
         private Duration firstProcessDelay;
         private Duration nexProcessDelay;
-        private MessageHandler<T> messageHandler;
-        private Integer handlerCount;
-        private Long pullCount;
+        private Duration pollingInterval;
+        private Long pullBatchSize;
 
-        public Builder<T> topic(String topic) {
+        public Builder topic(String topic) {
             this.topic = topic;
             return this;
         }
 
-        public Builder<T> maxAttempt(Integer maxAttempt) {
+        public Builder maxAttempt(Integer maxAttempt) {
             this.maxAttempt = maxAttempt;
             return this;
         }
 
-        public Builder<T> firstProcessDelay(Duration firstProcessDelay) {
+        public Builder firstProcessDelay(Duration firstProcessDelay) {
             this.firstProcessDelay = firstProcessDelay;
             return this;
         }
 
-        public Builder<T> nextProcessDelay(Duration nextProcessDelay) {
+        public Builder nextProcessDelay(Duration nextProcessDelay) {
             this.nexProcessDelay = nextProcessDelay;
             return this;
         }
 
-        public Builder<T> messageHandler(MessageHandler<T> messageHandler) {
-            this.messageHandler = messageHandler;
+        public Builder pollingInterval(Duration pollingInterval) {
+            this.pollingInterval = pollingInterval;
             return this;
         }
 
-        public Builder<T> handlerCount(Integer handlerCount) {
-            this.handlerCount = handlerCount;
+        public Builder pullBatchSize(Long pullBatchSize) {
+            this.pullBatchSize = pullBatchSize;
             return this;
         }
 
-        public Builder<T> pullCount(Long pullCount) {
-            this.pullCount = pullCount;
-            return this;
-        }
-
-        public QueueConfig<T> build() {
-            return new QueueConfig<>(this);
+        public QueueConfig build() {
+            return new QueueConfig(this);
         }
     }
 }

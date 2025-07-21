@@ -5,38 +5,50 @@ public final class Sqls {
     private Sqls() {
     }
 
-    public static final String INSERT_INTO_SIMPLE_QUEUE = """
-            insert into pgq_simple_queue (
+    public static final String INSERT = """
+            insert into pgq_message (
                     create_time,
-                    topic,
                     payload,
+                    topic,
                     status,
                     next_process_time,
+                    priority,
                     attempt,
                     max_attempt
                 )
                 values (
-                    :createTime
-                    :topic,
+                    :createTime,
                     :payload,
+                    :topic,
                     :status,
                     :nextProcessTime,
+                    :priority,
                     :attempt,
                     :maxAttempt
                 )
             """;
 
-    public static final String PULL_WAIT_HANDLE_FROM_SIMPLE_QUEUE = """
-            select * from pgq_simple_queue
-                where topic = :topic
-                and status = 'PENDING'
-                and next_process_time <= :nextProcessTime
-                order by id
-                limit :limit
-                for update skip locked
+    public static final String UPDATE = """
+            update pgq_message
+                 set status            = :status,
+                     next_process_time = :nextProcessTime,
+                     attempt           = :attempt
+                 where id = :id;
             """;
 
-    public static final String UPDATE_SIMPLE_QUEUE_STATUS = """
-            update pgq_simple_queue set status = :status where id = any(:ids)
+
+    public static String PULL = """
+            with messages (id) as (select id
+                                   from pgq_message
+                                   where topic = :topic
+                                     and status = 'PENDING'
+                                     and next_process_time <= now()
+                                   order by priority desc, id
+                                   limit :limit for update skip locked),
+                 op as (
+                     update pgq_message set status = 'PROCESSING' where id in (select id from messages))
+            select *
+            from pgq_message
+            where id in (select id from messages)
             """;
 }

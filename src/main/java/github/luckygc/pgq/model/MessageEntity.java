@@ -14,6 +14,8 @@ public class MessageEntity {
 
     private MessageStatus status;
 
+    private Integer priority;
+
     private LocalDateTime nextProcessTime;
 
     private Integer attempt;
@@ -82,5 +84,13 @@ public class MessageEntity {
 
     public void setMaxAttempt(Integer maxAttempt) {
         this.maxAttempt = maxAttempt;
+    }
+
+    public Integer getPriority() {
+        return priority;
+    }
+
+    public void setPriority(Integer priority) {
+        this.priority = priority;
     }
 }

@@ -16,6 +16,7 @@ public final class Utils {
         map.put("topic", messageEntity.getTopic());
         map.put("payload", messageEntity.getPayload());
         map.put("status", messageEntity.getStatus());
+        map.put("priority", messageEntity.getPriority());
         map.put("nextProcessTime", messageEntity.getNextProcessTime());
         map.put("attempt", messageEntity.getAttempt());
         map.put("maxAttempt", messageEntity.getMaxAttempt());
