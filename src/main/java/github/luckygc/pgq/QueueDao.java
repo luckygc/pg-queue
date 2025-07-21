@@ -6,7 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 public class QueueDao {
@@ -25,16 +27,35 @@ public class QueueDao {
         return messageEntity;
     };
 
+    private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final JdbcClient jdbcClient;
 
-    public QueueDao(JdbcClient jdbcClient) {
-        this.jdbcClient = Objects.requireNonNull(jdbcClient);
+    public QueueDao(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+        this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
+        this.jdbcClient = JdbcClient.create(jdbcTemplate);
     }
 
     public void insertMessageEntity(MessageEntity messageEntity) {
+        Objects.requireNonNull(messageEntity);
+
         jdbcClient.sql(Sqls.INSERT)
                 .params(messageEntityToMap(messageEntity))
                 .update();
+    }
+
+    @SuppressWarnings("unchecked")
+    public void insertMessageEntities(List<MessageEntity> messageEntities) {
+        Objects.requireNonNull(messageEntities);
+        if (messageEntities.isEmpty()) {
+            return;
+        }
+
+        Map<String, ?>[] array = messageEntities.stream().map(QueueDao::messageEntityToMap)
+                .toArray(Map[]::new);
+
+        namedParameterJdbcTemplate.batchUpdate(Sqls.INSERT, array);
     }
 
     public void updateMessageEntity(MessageEntity messageEntity) {
@@ -51,9 +72,10 @@ public class QueueDao {
                 .list();
     }
 
-    public long deleteCompleted(String topic) {
-        return jdbcClient.sql("delete from pgq_message where topic = :topic and status = 'COMPLETED'")
+    public long deleteByStatus(String topic, MessageStatus status) {
+        return jdbcClient.sql("delete from pgq_message where topic = :topic and status = :status")
                 .param("topic", topic)
+                .param("status", status.name())
                 .update();
     }
 

@@ -75,6 +75,38 @@ public class PgQueueImpl<M> implements PgQueue<M> {
     }
 
     @Override
+    public void push(List<M> messages) {
+        push(messages, 0);
+    }
+
+    @Override
+    public void push(List<M> messages, int priority) {
+        Objects.requireNonNull(messages);
+        if (messages.isEmpty()) {
+            return;
+        }
+
+        List<MessageEntity> entities = messages.stream().map(m -> toMessageEntity(m, priority))
+                .toList();
+        queueDao.insertMessageEntities(entities);
+    }
+
+    private MessageEntity toMessageEntity(M message, int priority) {
+        MessageEntity messageEntity = new MessageEntity();
+        messageEntity.setTopic(config.getTopic());
+        LocalDateTime now = LocalDateTime.now();
+        messageEntity.setCreateTime(now);
+        messageEntity.setPayload(messageSerializer.serialize(message));
+        messageEntity.setMaxAttempt(config.getMaxAttempt());
+        messageEntity.setPriority(priority);
+
+        messageEntity.setStatus(MessageStatus.PENDING);
+        messageEntity.setAttempt(0);
+        messageEntity.setNextProcessTime(now.plus(config.getFirstProcessDelay()));
+        return messageEntity;
+    }
+
+    @Override
     public void tryStartPollingAsync() {
         if (!semaphore.tryAcquire()) {
             return;
@@ -95,7 +127,12 @@ public class PgQueueImpl<M> implements PgQueue<M> {
 
     @Override
     public long deleteCompleted() {
-        return queueDao.deleteCompleted(config.getTopic());
+        return queueDao.deleteByStatus(config.getTopic(), MessageStatus.COMPLETED);
+    }
+
+    @Override
+    public long deleteDead() {
+        return queueDao.deleteByStatus(config.getTopic(), MessageStatus.DEAD);
     }
 
     private void polling() {
