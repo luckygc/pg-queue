@@ -7,4 +7,10 @@ public interface PgQueue<M> {
     QueueConfig getConfig();
 
     void push(M message);
+
+    void push(M message, int priority);
+
+    void tryStartPollingAsync();
+
+    long deleteCompleted();
 }

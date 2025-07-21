@@ -6,12 +6,10 @@ import github.luckygc.pgq.api.PgQueue;
 import github.luckygc.pgq.config.QueueConfig;
 import java.time.Duration;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.transaction.support.TransactionTemplate;
 
 public class PgQueueBuilder<M> {
 
     QueueDao queueDao;
-    TransactionTemplate transactionTemplate;
     final QueueConfig.Builder configBuilder = new QueueConfig.Builder();
     MessageSerializable<M> messageSerializer;
     MessageHandler<M> messageHandler;
@@ -21,17 +19,9 @@ public class PgQueueBuilder<M> {
         return new PgQueueBuilder<>();
     }
 
-    public TxTemplateGather jdbcClient(JdbcClient jdbcClient) {
+    public TopicGather jdbcClient(JdbcClient jdbcClient) {
         this.queueDao = new QueueDao(jdbcClient);
-        return new TxTemplateGather();
-    }
-
-    public class TxTemplateGather {
-
-        public TopicGather transactionTemplate(TransactionTemplate transactionTemplate) {
-            PgQueueBuilder.this.transactionTemplate = transactionTemplate;
-            return new TopicGather();
-        }
+        return new TopicGather();
     }
 
     public class TopicGather {

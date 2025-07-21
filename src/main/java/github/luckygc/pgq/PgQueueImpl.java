@@ -9,7 +9,10 @@ import github.luckygc.pgq.model.MessageStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +25,7 @@ public class PgQueueImpl<M> implements PgQueue<M> {
     private final MessageSerializable<M> messageSerializer;
     private final MessageHandler<M> messageHandler;
     private final Semaphore semaphore;
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     public PgQueueImpl(QueueDao queueDao, QueueConfig config, MessageSerializable<M> messageSerializer,
             MessageHandler<M> messageHandler, Integer handlerCount) {
@@ -37,6 +41,8 @@ public class PgQueueImpl<M> implements PgQueue<M> {
             throw new IllegalArgumentException("handlerCount必须大于0");
         }
         semaphore = new Semaphore(handlerCount);
+
+        scheduler.scheduleAtFixedRate(this::tryStartPollingAsync, 5, 10 * 60, TimeUnit.SECONDS);
     }
 
     @Override
@@ -46,12 +52,18 @@ public class PgQueueImpl<M> implements PgQueue<M> {
 
     @Override
     public void push(M message) {
+        push(message, 0);
+    }
+
+    @Override
+    public void push(M message, int priority) {
         MessageEntity messageEntity = new MessageEntity();
         messageEntity.setTopic(config.getTopic());
         LocalDateTime now = LocalDateTime.now();
         messageEntity.setCreateTime(now);
         messageEntity.setPayload(messageSerializer.serialize(message));
         messageEntity.setMaxAttempt(config.getMaxAttempt());
+        messageEntity.setPriority(priority);
 
         messageEntity.setStatus(MessageStatus.PENDING);
         messageEntity.setAttempt(0);
@@ -62,7 +74,8 @@ public class PgQueueImpl<M> implements PgQueue<M> {
         tryStartPollingAsync();
     }
 
-    private void tryStartPollingAsync() {
+    @Override
+    public void tryStartPollingAsync() {
         if (!semaphore.tryAcquire()) {
             return;
         }
@@ -78,6 +91,11 @@ public class PgQueueImpl<M> implements PgQueue<M> {
         Thread thread = new Thread(runnable, "pgq-%s".formatted(config.getTopic()));
         thread.setDaemon(true);
         thread.start();
+    }
+
+    @Override
+    public long deleteCompleted() {
+        return queueDao.deleteCompleted(config.getTopic());
     }
 
     private void polling() {
