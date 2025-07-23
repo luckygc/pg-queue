@@ -1,23 +1,20 @@
 package github.luckygc.pgq.api;
 
-import github.luckygc.pgq.config.QueueConfig;
+import github.luckygc.pgq.Message;
 import java.util.List;
+import java.util.Optional;
 
-public interface PgQueue<M> {
+public interface PgQueue {
 
-    QueueConfig getConfig();
+    void push(String messages);
 
-    void push(M message);
+    void push(List<String> messages);
 
-    void push(M message, int priority);
+    MessageGather message(String message);
 
-    void push(List<M> messages);
+    MessageGather messages(List<String> messages);
 
-    void push(List<M> messages, int priority);
+    Optional<Message> pull();
 
-    void tryStartPollingAsync();
-
-    long deleteCompleted();
-
-    long deleteDead();
+    List<Message> pull(int pullCount);
 }

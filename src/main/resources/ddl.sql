@@ -1,23 +1,26 @@
+create sequence if not exists pgq_message_seq start
+with
+    1 increment by 1 minvalue 1;
+
+drop table if exists pgq_queue;
 -- status : PENDING,PROCESSING,COMPLETED,DEAD
 create table
-    pgq_message (
-        id bigint generated always as identity primary key,
-        create_time timestamp not null,
-        payload text not null,
-        topic varchar(100) not null,
-        status varchar(20) not null,
-        next_process_time timestamp not null,
-        priority int not null,
-        attempt int,
-        max_attempt int
+    if not exists pgq_queue (
+        id bigint default nextval ('pgq_message_seq') primary key,
+        create_time timestamp not null default now(),
+        update_time timestamp not null default now(),
+        visible_time timestamp not null default now(),
+        status varchar(20) collate "C" not null,
+        topic varchar(100) collate "C" not null,
+        priority int not null default 0,
+        payload varchar collate "C" not null,
+        attempt int default 0
     );
 
-create index idx_pgq_message_topic_status_next_process_time_priority_id on pgq_message (
-    topic,
+create index if not exists idx_pgq_queue_visible_time_status_topic_priority_id on pgq_queue (
+    visible_time,
     status,
-    next_process_time,
+    topic,
     priority desc,
     id asc
 );
-
-
