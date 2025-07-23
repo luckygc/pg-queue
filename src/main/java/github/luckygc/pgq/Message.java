@@ -8,15 +8,11 @@ public class Message {
 
     private LocalDateTime createTime;
 
-    private LocalDateTime updateTime;
-
     private String payload;
 
     private String topic;
 
     private Integer priority;
-
-    private LocalDateTime visibleTime;
 
     private Integer attempt;
 
@@ -26,10 +22,6 @@ public class Message {
 
     public LocalDateTime getCreateTime() {
         return createTime;
-    }
-
-    public LocalDateTime getUpdateTime() {
-        return updateTime;
     }
 
     public String getPayload() {
@@ -44,10 +36,6 @@ public class Message {
         return priority;
     }
 
-    public LocalDateTime getVisibleTime() {
-        return visibleTime;
-    }
-
     public Integer getAttempt() {
         return attempt;
     }
@@ -60,10 +48,6 @@ public class Message {
         this.createTime = createTime;
     }
 
-    protected void setUpdateTime(LocalDateTime updateTime) {
-        this.updateTime = updateTime;
-    }
-
     protected void setPayload(String payload) {
         this.payload = payload;
     }
@@ -74,10 +58,6 @@ public class Message {
 
     protected void setPriority(Integer priority) {
         this.priority = priority;
-    }
-
-    protected void setVisibleTime(LocalDateTime visibleTime) {
-        this.visibleTime = visibleTime;
     }
 
     protected void setAttempt(Integer attempt) {
