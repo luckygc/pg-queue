@@ -1,32 +1,56 @@
 package github.luckygc.pgq;
 
+import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.function.Function;
+import java.util.Objects;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.RowMapper;
 
-public class QueueDao {
+class QueueDao {
 
-    private static final Function<ResultSet, Message> MESSAGE_ENTITY_ROW_MAPPER = rs -> {
-        try {
-            Message message = new Message();
-            message.setId(rs.getLong("id"));
-            message.setCreateTime(rs.getTimestamp("create_time").toLocalDateTime());
-            message.setUpdateTime(rs.getTimestamp("update_time").toLocalDateTime());
-            message.setVisibleTime(rs.getTimestamp("visible_time").toLocalDateTime());
-            message.setTopic(rs.getString("topic"));
-            message.setPriority(rs.getInt("priority"));
-            message.setPayload(rs.getString("payload"));
-            message.setAttempt(rs.getInt("attempt"));
-            return message;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+    private static final String NEW_INSERT_INTO_PENDING = """
+            insert into pgq_pending_queue
+                (create_time, topic, priority, payload, attempt)
+                values($1, $2, $3, $4, $5)
+            """;
+
+    private static final String NEW_INSERT_INTO_INVISIBLE = """
+            insert into pgq_invisible_queue
+                (create_time, topic, priority, payload, attempt, visible_time)
+                values($1, $2, $3, $4, $5, $6)
+            """;
+
+    private static final String NEW_BATCH_INSERT_INTO_PENDING = """
+            insert into pgq_pending_queue
+                (create_time, topic, priority, payload, attempt)
+                select * from unnest($1, $2, $3, $4, $5) as t
+                (create_time, topic, priority, payload, attempt)
+            """;
+
+    private static final String NEW_BATCH_INSERT_INTO_INVISIBLE = """
+            insert into pgq_invisible_queue
+                (create_time, topic, priority, payload, attempt, visible_time)
+                select * from unnest($1, $2, $3, $4, $5, $6) as t
+                (create_time, topic, priority, payload, attempt, visible_time)
+            """;
+
+    private static final RowMapper<Message> messageMapper = (rs, ignore) -> {
+        Message message = new Message();
+        message.setId(rs.getLong(1));
+        message.setCreateTime(rs.getTimestamp(2).toLocalDateTime());
+        message.setTopic(rs.getString(3));
+        message.setPriority(rs.getInt(4));
+        message.setPayload(rs.getString(5));
+        message.setAttempt(rs.getInt(6));
+        return message;
     };
 
     private final JdbcTemplate jdbcTemplate;
@@ -35,107 +59,245 @@ public class QueueDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public void insertMessageEntity(@Nullable Message message) {
+    public void insertMessage(@Nullable Message message) {
+        insertMessage(message, null);
+    }
+
+    public void insertMessage(@Nullable Message message, @Nullable Duration processDelay) {
         if (message == null) {
             return;
         }
 
-        jdbcTemplate.execute(insertPsCreator(message), PreparedStatement::executeUpdate);
+        jdbcTemplate.execute(insertPsCreator(message, processDelay), PreparedStatement::executeUpdate);
     }
 
-    private PreparedStatementCreator insertPsCreator(Message message) {
+    private PreparedStatementCreator insertPsCreator(Message message, Duration processDelay) {
         return con -> {
-            String sql = """
-                    insert into pgq_queue
-                        (create_time, update_time, visible_time, status, topic, priority, payload, attempt)
-                        values($1, $2, $3, $4, $5, $6, $7, $8)
-                    """;
+            String sql = NEW_INSERT_INTO_PENDING;
+            boolean isProcessLater = processDelay != null && !processDelay.isZero() && !processDelay.isNegative();
+            if (isProcessLater) {
+                sql = NEW_INSERT_INTO_INVISIBLE;
+            }
+
             PreparedStatement ps = con.prepareStatement(sql);
 
             ps.setTimestamp(1, Timestamp.valueOf(message.getCreateTime()));
-            ps.setTimestamp(2, Timestamp.valueOf(message.getUpdateTime()));
-            ps.setTimestamp(3, Timestamp.valueOf(message.getVisibleTime()));
-            ps.setString(4, MessageStatus.PENDING.name());
-            ps.setString(5, message.getTopic());
-            ps.setInt(6, message.getPriority());
-            ps.setString(7, message.getPayload());
-            ps.setInt(8, message.getAttempt());
+            ps.setString(2, message.getTopic());
+            ps.setInt(3, message.getPriority());
+            ps.setString(4, message.getPayload());
+            ps.setInt(5, message.getAttempt());
+            if (isProcessLater) {
+                ps.setTimestamp(6, Timestamp.valueOf(message.getCreateTime().plus(processDelay)));
+            }
 
             return ps;
         };
     }
 
-    public void insertMessageEntities(@Nullable List<Message> messageEntities) {
-        if (messageEntities == null || messageEntities.isEmpty()) {
-            return;
-        }
-
-        if (messageEntities.size() == 1) {
-            insertMessageEntity(messageEntities.get(0));
-            return;
-        }
-
-        jdbcTemplate.execute(batchInsertPsCreator(messageEntities), PreparedStatement::executeUpdate);
+    public void insertMessages(@Nullable List<Message> messages) {
+        insertMessages(messages, null);
     }
 
-    private PreparedStatementCreator batchInsertPsCreator(List<Message> messageEntities) {
+    public void insertMessages(@Nullable List<Message> messages, @Nullable Duration processDelay) {
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+
+        if (messages.size() == 1) {
+            insertMessage(messages.get(0), processDelay);
+            return;
+        }
+
+        jdbcTemplate.execute(batchInsertPsCreator(messages, processDelay), PreparedStatement::executeUpdate);
+    }
+
+    private PreparedStatementCreator batchInsertPsCreator(List<Message> messages, @Nullable Duration processDelay) {
         return con -> {
-            String sql = """
-                    insert into pgq_queue
-                    (create_time, update_time, visible_time, status, topic, priority, payload, attempt)
-                    select * from unnest($1, $2, $3, $4, $5, $6, $7, $8)
-                    as t
-                    (create_time, update_time, visible_time, status, topic, priority, payload, attempt)
-                    """;
+            String sql = NEW_BATCH_INSERT_INTO_PENDING;
+            boolean isProcessLater = processDelay != null && !processDelay.isZero() && !processDelay.isNegative();
+            if (isProcessLater) {
+                sql = NEW_BATCH_INSERT_INTO_INVISIBLE;
+            }
+
             PreparedStatement ps = con.prepareStatement(sql);
 
-            // 准备数组数据
-            int size = messageEntities.size();
+            int size = messages.size();
             Timestamp[] createTimes = new Timestamp[size];
-            Timestamp[] updateTimes = new Timestamp[size];
-            String[] payloads = new String[size];
             String[] topics = new String[size];
-            String[] statuses = new String[size];
-            Timestamp[] visibleTimes = new Timestamp[size];
             Integer[] priorities = new Integer[size];
+            String[] payloads = new String[size];
             Integer[] attempts = new Integer[size];
+            Timestamp[] visibleTimes = new Timestamp[isProcessLater ? size : 0];
             int i = 0;
-            // 填充数组数据
-            for (Message entity : messageEntities) {
-                createTimes[i] = Timestamp.valueOf(entity.getCreateTime());
-                updateTimes[i] = Timestamp.valueOf(entity.getUpdateTime());
-                visibleTimes[i] = Timestamp.valueOf(entity.getVisibleTime());
-                statuses[i] = MessageStatus.PENDING.name();
-                topics[i] = entity.getTopic();
-                priorities[i] = entity.getPriority();
-                payloads[i] = entity.getPayload();
-                attempts[i] = entity.getAttempt();
+            for (Message message : messages) {
+                createTimes[i] = Timestamp.valueOf(message.getCreateTime());
+                topics[i] = message.getTopic();
+                priorities[i] = message.getPriority();
+                payloads[i] = message.getPayload();
+                attempts[i] = message.getAttempt();
+                if (isProcessLater) {
+                    visibleTimes[i] = Timestamp.valueOf(message.getCreateTime().plus(processDelay));
+                }
                 i++;
             }
 
-            // 绑定参数
             ps.setArray(1, con.createArrayOf("timestamp", createTimes));
-            ps.setArray(2, con.createArrayOf("timestamp", updateTimes));
-            ps.setArray(3, con.createArrayOf("timestamp", visibleTimes));
-            ps.setArray(4, con.createArrayOf("varchar", statuses));
-            ps.setArray(5, con.createArrayOf("varchar", topics));
-            ps.setArray(6, con.createArrayOf("integer", priorities));
-            ps.setArray(7, con.createArrayOf("varchar", payloads));
-            ps.setArray(8, con.createArrayOf("integer", attempts));
+            ps.setArray(2, con.createArrayOf("varchar", topics));
+            ps.setArray(3, con.createArrayOf("integer", priorities));
+            ps.setArray(4, con.createArrayOf("varchar", payloads));
+            ps.setArray(5, con.createArrayOf("integer", attempts));
+            if (isProcessLater) {
+                ps.setArray(6, con.createArrayOf("timestamp", visibleTimes));
+            }
 
             return ps;
         };
     }
 
-    public void updateMessageEntity(Message message) {
-
+    /**
+     * 批量把到时间的不可见消息移入带出了队列
+     */
+    public void schedule() {
+        String sql = """
+                WITH lock_result AS (
+                  SELECT pg_try_advisory_xact_lock(654321) AS locked
+                ),
+                message_to_pending as (
+                    delete from pgq_invisible_queue where visible_time <= $1 and (select locked from lock_result)
+                    returning id, create_time, topic, priority, payload, attempt
+                ),
+                insert_op as (
+                    insert into pgq_pending_queue (id, create_time, topic, priority, payload, attempt)
+                select id, create_time, topic, priority, payload, attempt from message_to_pending
+                )
+                select pg_notify('__pgq_queue__', topic) from pgq_pending_queue group by topic
+                """;
+        jdbcTemplate.update(sql, LocalDateTime.now());
     }
 
-    public List<Message> findWaitHandleMessageEntities(String topic, long limit) {
-        return null;
+    public Optional<Message> pull(String topic) {
+        Objects.requireNonNull(topic);
+
+        List<Message> messages = pull(topic, 1);
+        if (messages.isEmpty()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(messages.get(0));
     }
 
-    public long deleteByStatus(String topic, MessageStatus status) {
-        return 0;
+    public List<Message> pull(String topic, int batchSize) {
+        Objects.requireNonNull(topic);
+        if (batchSize < 1 || batchSize > 5000) {
+            throw new IllegalArgumentException("batch必须在[1-5000]之间");
+        }
+
+        String sql = """
+                with message_to_process as (
+                    select * from pgq_pending_queue where topic = $1
+                                                     order by priority desc ,id limit $2 for update skip locked
+                ),insert_op as (
+                    insert into pgq_processing_queue (id, create_time, topic, priority, payload, attempt, process_time)
+                    select id, create_time, topic, priority, payload, attempt, now() from message_to_process
+                )
+                delete from pgq_pending_queue where id in (select w.id from message_to_process w)
+                returning id, create_time, topic, priority, payload, attempt
+                """;
+        return jdbcTemplate.query(sql, messageMapper, topic, batchSize);
+    }
+
+    public void deleteProcessingMessage(Message message) {
+        Objects.requireNonNull(message);
+
+        jdbcTemplate.update("delete from pgq_processing_queue where id = $1", message.getId());
+    }
+
+    public void deleteProcessingMessage(List<Message> messages) {
+        Objects.requireNonNull(messages);
+        if (messages.isEmpty()) {
+            return;
+        }
+
+        if (messages.size() == 1) {
+            deleteProcessingMessage(messages.get(0));
+            return;
+        }
+
+        jdbcTemplate.execute(deleteProcessingMessagePsCreator(messages), PreparedStatement::executeUpdate);
+    }
+
+    private PreparedStatementCreator deleteProcessingMessagePsCreator(List<Message> messages) {
+        return con -> {
+            String sql = "delete from pgq_processing_queue where id = any($1)";
+            PreparedStatement ps = con.prepareStatement(sql);
+            Long[] ids = new Long[messages.size()];
+            int i = 0;
+            for (Message message : messages) {
+                ids[i++] = message.getId();
+            }
+
+            ps.setArray(1, con.createArrayOf("bigint", ids));
+            return ps;
+        };
+    }
+
+    public void moveProcessingToDead(Message message) {
+        Objects.requireNonNull(message);
+
+        String sql = """
+                with message_to_dead as (
+                    delete from pgq_processing_queue where id = $1
+                    returning id, create_time, topic, priority, payload, attempt
+                )
+                insert into pgq_dead_queue
+                (id, create_time, topic, priority, payload, attempt, dead_time)
+                select
+                 id, create_time, topic, priority, payload, attempt, now() from message_to_dead
+                """;
+        jdbcTemplate.update(sql, message.getId());
+    }
+
+    public void moveProcessingToDead(List<Message> messages) {
+        Objects.requireNonNull(messages);
+        if (messages.isEmpty()) {
+            return;
+        }
+
+        if (messages.size() == 1) {
+            moveProcessingToDead(messages.get(0));
+            return;
+        }
+
+        jdbcTemplate.execute(moveProcessingToDeadPsCreator(messages), PreparedStatement::executeUpdate);
+    }
+
+    private PreparedStatementCreator moveProcessingToDeadPsCreator(List<Message> messages) {
+        return con -> {
+            String sql = """
+                    with message_to_dead as (
+                        delete from pgq_processing_queue where id = any($1)
+                        returning id, create_time, topic, priority, payload, attempt
+                    )
+                    insert into pgq_dead_queue
+                    (id, create_time, topic, priority, payload, attempt, dead_time)
+                    select
+                     id, create_time, topic, priority, payload, attempt, now() from message_to_dead
+                    """;
+            return createPsAndSetIdArray(con, sql, messages);
+        };
+    }
+
+    private PreparedStatement createPsAndSetIdArray(Connection con, String sql, List<Message> messages)
+            throws SQLException {
+        PreparedStatement ps = con.prepareStatement(sql);
+        Long[] ids = new Long[messages.size()];
+        int i = 0;
+        for (Message message : messages) {
+            ids[i++] = message.getId();
+        }
+
+        ps.setArray(1, con.createArrayOf("bigint", ids));
+
+        return ps;
     }
 }

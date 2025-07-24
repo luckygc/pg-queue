@@ -12,7 +12,7 @@ public class PushDslTest {
 
     @Test
     void test() {
-        PgQueue queue = pgqManager.queue("topic");
+        PgQueue queue = pgqManager.registerQueue("topic");
 
         queue.push("m1");
         queue.push(List.of("m2", "m3"));

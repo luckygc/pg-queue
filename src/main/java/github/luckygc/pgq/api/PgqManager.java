@@ -2,7 +2,9 @@ package github.luckygc.pgq.api;
 
 public interface PgqManager {
 
-    PgQueue queue(String topic);
+    PgQueue registerQueue(String topic);
+
+    PgQueue registerMessageHandler(MessageHandler... handlers);
 
     MessageManager messageManager();
 }

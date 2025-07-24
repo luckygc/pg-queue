@@ -6,6 +6,8 @@ import java.util.Optional;
 
 public interface PgQueue {
 
+    String getTopic();
+
     void push(String messages);
 
     void push(List<String> messages);
@@ -13,6 +15,8 @@ public interface PgQueue {
     MessageGather message(String message);
 
     MessageGather messages(List<String> messages);
+
+    void listen();
 
     Optional<Message> pull();
 
