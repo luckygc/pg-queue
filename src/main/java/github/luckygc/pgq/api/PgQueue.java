@@ -2,25 +2,22 @@ package github.luckygc.pgq.api;
 
 import github.luckygc.pgq.Message;
 import java.util.List;
-import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
 public interface PgQueue {
 
     String getTopic();
 
-    void push(String messages);
+    void push(@Nullable String message);
 
-    void push(List<String> messages);
+    void push(@Nullable List<String> messages);
 
-    MessageGather message(String message);
+    MessageGather message(@Nullable String message);
 
-    MessageGather messages(List<String> messages);
+    MessageGather messages(@Nullable List<String> messages);
 
-    void registerMessageProcessor(MessageProcessor messageProcessor);
-
-    MessageProcessor getMessageProcessor();
-
-    Optional<Message> pull();
+    @Nullable
+    Message pull();
 
     List<Message> pull(int pullCount);
 }
