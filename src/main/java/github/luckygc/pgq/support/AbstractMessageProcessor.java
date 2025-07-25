@@ -6,13 +6,15 @@ import java.util.concurrent.Semaphore;
 
 public abstract class AbstractMessageProcessor implements MessageProcessor {
 
+    private final PgQueue pgQueue;
     private final Semaphore semaphore;
 
-    AbstractMessageProcessor() {
-        this.semaphore = new Semaphore(1);
+    public AbstractMessageProcessor(PgQueue pgQueue) {
+        this(pgQueue, 1);
     }
 
-    AbstractMessageProcessor(int threadCount) {
+    public AbstractMessageProcessor(PgQueue pgQueue, int threadCount) {
+        this.pgQueue = pgQueue;
         if (threadCount < 1) {
             throw new IllegalArgumentException("threadCount必须大于0");
         }
@@ -20,7 +22,7 @@ public abstract class AbstractMessageProcessor implements MessageProcessor {
     }
 
     @Override
-    public void onMessageAvailable(PgQueue pgQueue) {
+    public void onMessageAvailable() {
         if (!semaphore.tryAcquire()) {
             return;
         }
@@ -28,7 +30,7 @@ public abstract class AbstractMessageProcessor implements MessageProcessor {
         try {
             Thread thread = new Thread(() -> {
                 try {
-                    processMessages(pgQueue);
+                    processMessages();
                 } finally {
                     semaphore.release();
                 }
@@ -40,5 +42,5 @@ public abstract class AbstractMessageProcessor implements MessageProcessor {
         }
     }
 
-    abstract void processMessages(PgQueue pgQueue);
+    protected abstract void processMessages();
 }
