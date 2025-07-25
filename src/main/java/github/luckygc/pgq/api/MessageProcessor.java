@@ -2,7 +2,9 @@ package github.luckygc.pgq.api;
 
 public interface MessageProcessor {
 
-    PgQueue pgQueue();
+    String topic();
 
     void onMessageAvailable();
+
+    void processMessages();
 }

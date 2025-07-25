@@ -4,12 +4,12 @@ import org.jspecify.annotations.Nullable;
 
 public interface PgqManager {
 
-    void registerQueue(PgQueue queue);
+    PgQueue registerQueue(String topic);
 
     @Nullable
     PgQueue getQueue(String topic);
 
-    void registerMessageProcessor();
+    void registerMessageProcessor(String topic, MessageProcessor messageProcessor);
 
     @Nullable
     MessageProcessor getMessageProcessor(String topic);

@@ -10,6 +10,10 @@ public interface MessageManager {
 
     void delete(List<Message> messages);
 
+    void complete(Message message);
+
+    void complete(List<Message> messages);
+
     void retry(Message message, Duration processDelay);
 
     void retry(List<Message> messages, Duration processDelay);
@@ -17,4 +21,6 @@ public interface MessageManager {
     void dead(Message message);
 
     void dead(List<Message> messages);
+
+
 }

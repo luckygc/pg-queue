@@ -1,5 +1,7 @@
 package github.luckygc.pgq;
 
+import github.luckygc.pgq.api.MessageProcessor;
+import github.luckygc.pgq.api.PgqManager;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -26,14 +28,16 @@ public class PgqListener {
     private final String jdbcUrl;
     private final String username;
     private final String password;
+    private final PgqManager pgqManager;
 
     private final AtomicBoolean runningFlag = new AtomicBoolean(false);
     private volatile PgConnection con;
 
-    public PgqListener(String jdbcUrl, String username, String password) {
+    public PgqListener(String jdbcUrl, String username, String password, PgqManager pgqManager) {
         this.jdbcUrl = jdbcUrl;
         this.username = username;
         this.password = password;
+        this.pgqManager = pgqManager;
     }
 
     /**
@@ -54,21 +58,40 @@ public class PgqListener {
                 try {
                     checkConnection();
                     PGNotification[] notifications = con.getNotifications(notifyTimeoutMills);
-                    if (notifications != null) {
-                        for (PGNotification notification : notifications) {
-                            String parameter = notification.getParameter();
+                    if (notifications == null) {
+                        continue;
+                    }
+
+                    for (PGNotification notification : notifications) {
+                        String channel = notification.getName();
+                        if (!CHANNEL.equals(channel)) {
+                            continue;
                         }
+
+                        String payload = notification.getParameter();
+                        int pid = notification.getPID();
+                        logger.debug("收到消息, channel:{}, payload:{}, pid:{}", channel, payload, pid);
+
+                        handleChannelPayload(payload);
                     }
                 } catch (SQLException e) {
                     logger.error("读取通知失败", e);
                     LockSupport.parkNanos(firstReconnectDelay);
                     reconnect();
                 }
-
             }
         }, "pgq-listener");
         listenerThread.setDaemon(true);
         listenerThread.start();
+    }
+
+    private void handleChannelPayload(String payload) {
+        MessageProcessor messageProcessor = pgqManager.getMessageProcessor(payload);
+        if (messageProcessor == null) {
+            return;
+        }
+
+        messageProcessor.onMessageAvailable();
     }
 
     /**
