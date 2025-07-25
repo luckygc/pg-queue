@@ -16,7 +16,9 @@ public interface PgQueue {
 
     MessageGather messages(List<String> messages);
 
-    void listen();
+    void registerMessageProcessor(MessageProcessor messageProcessor);
+
+    MessageProcessor getMessageProcessor();
 
     Optional<Message> pull();
 
