@@ -112,8 +112,18 @@ public class PgqQueueImpl implements PgQueue {
     }
 
     @Override
+    public @Nullable Message pull(Duration processTimeout) {
+        return null;
+    }
+
+    @Override
     public List<Message> pull(int pullCount) {
         return queueDao.pull(topic, pullCount);
+    }
+
+    @Override
+    public List<Message> pull(int pullCount, Duration processTimeout) {
+        return List.of();
     }
 
 }

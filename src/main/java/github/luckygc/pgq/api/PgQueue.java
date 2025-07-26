@@ -30,5 +30,10 @@ public interface PgQueue {
     @Nullable
     Message pull();
 
+    @Nullable
+    Message pull(Duration processTimeout);
+
     List<Message> pull(int pullCount);
+
+    List<Message> pull(int pullCount, Duration processTimeout);
 }
