@@ -131,6 +131,16 @@ public class QueueDao {
             select id, create_time, topic, priority, payload, attempt, ? from message_to_retry
             """;
 
+    private static final String MOVE_PROCESSING_MESSAGES_TO_INVISIBLE = """
+            with message_to_retry as (
+                delete from pgq_processing_queue where id = any(?::bigint[])
+                returning id, create_time, topic, priority, payload, attempt
+            )
+            insert into pgq_invisible_queue
+                  (id, create_time, topic, priority, payload, attempt, visible_time)
+            select id, create_time, topic, priority, payload, attempt, ? from message_to_retry
+            """;
+
     private static final RowMapper<Message> messageMapper = (rs, ignore) -> {
         Message message = new Message();
         message.setId(rs.getLong(1));
@@ -316,7 +326,6 @@ public class QueueDao {
         Objects.requireNonNull(message);
 
         LocalDateTime nextVisibleTime = LocalDateTime.now();
-
         if (processDelay != null) {
             checkDurationIsPositive(processDelay);
             nextVisibleTime = nextVisibleTime.plus(processDelay);
@@ -329,7 +338,6 @@ public class QueueDao {
         Objects.requireNonNull(messages);
 
         LocalDateTime nextVisibleTime = LocalDateTime.now();
-
         if (processDelay != null) {
             checkDurationIsPositive(processDelay);
             nextVisibleTime = nextVisibleTime.plus(processDelay);
@@ -340,7 +348,7 @@ public class QueueDao {
         }
 
         Long[] idArray = getIdArray(messages);
-        jdbcTemplate.update(MOVE_PROCESSING_MESSAGE_TO_INVISIBLE, idArray, nextVisibleTime);
+        jdbcTemplate.update(MOVE_PROCESSING_MESSAGES_TO_INVISIBLE, idArray, nextVisibleTime);
     }
 
     private static void insertPsSetter(PreparedStatement ps, Message message)
