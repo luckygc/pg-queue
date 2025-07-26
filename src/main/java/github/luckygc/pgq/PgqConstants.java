@@ -14,9 +14,10 @@ public class PgqConstants {
      */
     public static final Duration PROCESS_TIMEOUT = Duration.ofMinutes(10);
 
-    /*--------------------------------sql start----------------------------------*/
+    public static final int MESSAGE_HANDLER_PULL_COUNT = 50;
+    public static final int MESSAGE_HANDLER_THREAD_COUNT = 50;
+
     public static final int PGQ_ID = 199738;
     public static final int SCHEDULER_ID = 1;
     public static final String CHANNEL_NAME = "pgq_topic_channel";
-    /*--------------------------------sql end------------------------------------*/
 }
