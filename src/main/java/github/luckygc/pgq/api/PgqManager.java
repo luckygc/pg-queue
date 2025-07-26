@@ -1,5 +1,6 @@
 package github.luckygc.pgq.api;
 
+import github.luckygc.pgq.QueueDao;
 import org.jspecify.annotations.Nullable;
 
 public interface PgqManager {
@@ -9,10 +10,9 @@ public interface PgqManager {
     @Nullable
     PgQueue getQueue(String topic);
 
-    void registerMessageProcessor(String topic, MessageListener messageListener);
+    QueueDao queueDao();
 
-    @Nullable
-    MessageListener getMessageProcessor(String topic);
+    void startListen();
 
-    ProcessingMessageManager messageManager();
+    void stopListen();
 }
