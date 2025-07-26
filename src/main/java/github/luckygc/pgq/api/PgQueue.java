@@ -13,6 +13,8 @@ public interface PgQueue {
 
     void registerMessageListener(MessageListener messageListener);
 
+    MessageListener messageListener();
+
     void push(String message);
 
     void push(String message, @Nullable Duration processDelay);
