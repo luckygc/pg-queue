@@ -3,12 +3,12 @@ package github.luckygc.pgq;
 import github.luckygc.pgq.api.MessageListener;
 import github.luckygc.pgq.api.PgQueue;
 import github.luckygc.pgq.api.PgqManager;
+import github.luckygc.pgq.api.ProcessingMessageManager;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,10 +27,11 @@ public class PgqManagerImpl implements PgqManager {
 
     private static final Logger logger = LoggerFactory.getLogger(PgqManagerImpl.class);
 
-    private static final int notifyTimeoutMills = Math.toIntExact(TimeUnit.SECONDS.toMillis(25));
-    private static final long reconnectRetryDelayNanos = TimeUnit.SECONDS.toNanos(10);
-    private static final long firstReconnectDelayNanos = TimeUnit.SECONDS.toNanos(5);
-    private static final int validConTimeoutSeconds = 1;
+    private static final int NOTIFY_TIMEOUT_MILLIS = Math.toIntExact(TimeUnit.SECONDS.toMillis(25));
+    private static final long RECONNECT_RETRY_DELAY_NANOS = TimeUnit.SECONDS.toNanos(10);
+    private static final long FIRST_RECONNECT_DELAY_NANOS = TimeUnit.SECONDS.toNanos(5);
+    private static final int VALID_CONNECTION_TIMEOUT_SECONDS = 1;
+    private static final long MESSAGE_AVAILABLE_TIMEOUT_MILLIS = Duration.ofMinutes(1).toMillis();
 
     private final Map<String, PgQueue> queueMap = new ConcurrentHashMap<>();
 
@@ -39,9 +40,12 @@ public class PgqManagerImpl implements PgqManager {
     private final String username;
     private final String password;
     private final AtomicBoolean listeningFlag = new AtomicBoolean(false);
-    private volatile PgConnection con;
+
+    @Nullable
+    private volatile PgConnection con = null;
 
     private final QueueDao queueDao;
+    private final ProcessingMessageManager processingMessageManager;
 
     public PgqManagerImpl(String jdbcUrl, String username, String password, JdbcTemplate jdbcTemplate,
             TransactionTemplate transactionTemplate) {
@@ -49,6 +53,7 @@ public class PgqManagerImpl implements PgqManager {
         this.username = username;
         this.password = password;
         this.queueDao = new QueueDao(jdbcTemplate, transactionTemplate);
+        this.processingMessageManager = new ProcessingMessageManagerImpl(queueDao);
     }
 
     @Override
@@ -60,8 +65,21 @@ public class PgqManagerImpl implements PgqManager {
                 throw new IllegalStateException("重复注册,topic:%s".formatted(topic));
             }
 
-            // TODO 新建PgQueue
-            return (PgQueue) null;
+            return new PgQueueImpl(queueDao, k, processingMessageManager, null);
+        });
+    }
+
+    @Override
+    public PgQueue registerQueue(String topic, MessageListener messageListener) {
+        Objects.requireNonNull(topic);
+        Objects.requireNonNull(messageListener);
+
+        return queueMap.compute(topic, (k, v) -> {
+            if (v != null) {
+                throw new IllegalStateException("重复注册,topic:%s".formatted(topic));
+            }
+
+            return new PgQueueImpl(queueDao, k, processingMessageManager, messageListener);
         });
     }
 
@@ -92,7 +110,7 @@ public class PgqManagerImpl implements PgqManager {
             while (listeningFlag.get()) {
                 try {
                     checkConnection();
-                    PGNotification[] notifications = con.getNotifications(notifyTimeoutMills);
+                    PGNotification[] notifications = con.getNotifications(NOTIFY_TIMEOUT_MILLIS);
                     if (notifications == null) {
                         continue;
                     }
@@ -108,7 +126,7 @@ public class PgqManagerImpl implements PgqManager {
                     }
                 } catch (SQLException e) {
                     logger.error("读取通知失败", e);
-                    LockSupport.parkNanos(firstReconnectDelayNanos);
+                    LockSupport.parkNanos(FIRST_RECONNECT_DELAY_NANOS);
                     reconnect();
                 }
             }
@@ -125,14 +143,13 @@ public class PgqManagerImpl implements PgqManager {
         }
 
         MessageListener messageListener = queue.messageListener();
-        LocalDateTime start = LocalDateTime.now();
         if (messageListener != null) {
+            long start = System.currentTimeMillis();
             messageListener.onMessageAvailable();
-        }
-
-        LocalDateTime end = LocalDateTime.now();
-        if (end.isAfter(start.plus(Duration.ofMinutes(1)))) {
-            logger.warn("onMessageAvailable方法执行时间过长,请不要阻塞调用, topic:{}", payload);
+            long end = System.currentTimeMillis();
+            if ((end - start) > MESSAGE_AVAILABLE_TIMEOUT_MILLIS) {
+                logger.warn("onMessageAvailable方法执行时间过长,请不要阻塞调用, topic:{}", payload);
+            }
         }
     }
 
@@ -157,14 +174,14 @@ public class PgqManagerImpl implements PgqManager {
                 break;
             } catch (SQLException e) {
                 logger.error("尝试重新监听失败", e);
-                LockSupport.parkNanos(reconnectRetryDelayNanos);
+                LockSupport.parkNanos(RECONNECT_RETRY_DELAY_NANOS);
                 attempt++;
             }
         }
     }
 
     private void checkConnection() throws SQLException {
-        if (con == null || !con.isValid(validConTimeoutSeconds)) {
+        if (con == null || !con.isValid(VALID_CONNECTION_TIMEOUT_SECONDS)) {
             reconnect();
         }
     }
