@@ -108,7 +108,7 @@ public class PgqManagerImpl implements PgqManager {
             while (listeningFlag.get()) {
                 try {
                     checkConnection();
-                    PGNotification[] notifications = con.getNotifications(NOTIFY_TIMEOUT_MILLIS);
+                    PGNotification[] notifications = Objects.requireNonNull(con).getNotifications(NOTIFY_TIMEOUT_MILLIS);
                     if (notifications == null) {
                         continue;
                     }
@@ -155,7 +155,7 @@ public class PgqManagerImpl implements PgqManager {
         Connection raw = DriverManager.getConnection(jdbcUrl, username, password);
         con = raw.unwrap(PgConnection.class);
 
-        try (Statement statement = con.createStatement()) {
+        try (Statement statement = Objects.requireNonNull(con).createStatement()) {
             statement.execute("LISTEN %s".formatted(PgqConstants.CHANNEL_NAME));
         }
 
@@ -179,7 +179,7 @@ public class PgqManagerImpl implements PgqManager {
     }
 
     private void checkConnection() throws SQLException {
-        if (con == null || !con.isValid(VALID_CONNECTION_TIMEOUT_SECONDS)) {
+        if (con == null || !Objects.requireNonNull(con).isValid(VALID_CONNECTION_TIMEOUT_SECONDS)) {
             reconnect();
         }
     }
@@ -190,7 +190,7 @@ public class PgqManagerImpl implements PgqManager {
     private void closeConnectionQuietly() {
         if (con != null) {
             try {
-                con.close();
+                Objects.requireNonNull(con).close();
             } catch (SQLException e) {
                 logger.info("关闭连接时发生异常", e);
             }
