@@ -118,4 +118,39 @@ public class PgqQueueImpl implements PgQueue {
     public void dead(List<Message> messages) {
 
     }
+
+    public static class MessageGatherImpl implements MessageGather {
+
+        private final QueueDao queueDao;
+        private final List<String> messages;
+        private Integer priority;
+        private Duration processDelay;
+
+        public MessageGatherImpl(QueueDao queueDao, String message) {
+            this.queueDao = queueDao;
+            this.messages = List.of(message);
+        }
+
+        public MessageGatherImpl(QueueDao queueDao, List<String> messages) {
+            this.queueDao = queueDao;
+            this.messages = messages;
+        }
+
+        @Override
+        public MessageGather priority(int priority) {
+            this.priority = priority;
+            return this;
+        }
+
+        @Override
+        public MessageGather processDelay(Duration delay) {
+            this.processDelay = delay;
+            return this;
+        }
+
+        @Override
+        public void push() {
+
+        }
+    }
 }
