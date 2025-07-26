@@ -158,8 +158,8 @@ public class QueueDao {
     private final TransactionTemplate txTemplate;
 
     public QueueDao(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.txTemplate = transactionTemplate;
+        this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+        this.txTemplate = Objects.requireNonNull(transactionTemplate);
     }
 
     public void insertMessage(Message message) {
