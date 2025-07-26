@@ -1,19 +1,19 @@
 package github.luckygc.pgq;
 
-import github.luckygc.pgq.api.MessageListener;
+import github.luckygc.pgq.api.QueueListener;
 import github.luckygc.pgq.api.PgQueue;
 import github.luckygc.pgq.api.QueueManager;
 import org.jspecify.annotations.Nullable;
 
-public record QueueManagerImpl(PgQueue pgQueue, @Nullable MessageListener messageListener) implements QueueManager {
+public record QueueManagerImpl(PgQueue pgQueue, @Nullable QueueListener messageListener) implements QueueManager {
 
     @Override
-    public PgQueue pgQueue() {
+    public PgQueue queue() {
         return pgQueue;
     }
 
     @Override
-    public @Nullable MessageListener messageListener() {
+    public @Nullable QueueListener messageListener() {
         return messageListener;
     }
 }

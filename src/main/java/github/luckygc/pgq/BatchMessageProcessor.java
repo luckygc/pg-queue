@@ -1,7 +1,7 @@
 package github.luckygc.pgq;
 
 import github.luckygc.pgq.api.BatchMessageHandler;
-import github.luckygc.pgq.api.MessageListener;
+import github.luckygc.pgq.api.QueueListener;
 import github.luckygc.pgq.api.PgQueue;
 import java.util.List;
 import java.util.Objects;
@@ -9,7 +9,7 @@ import java.util.concurrent.Semaphore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BatchMessageProcessor implements MessageListener {
+public class BatchMessageProcessor implements QueueListener {
 
     private static final Logger log = LoggerFactory.getLogger(BatchMessageProcessor.class);
     private final Semaphore semaphore;

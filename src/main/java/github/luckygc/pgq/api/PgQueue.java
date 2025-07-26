@@ -7,8 +7,6 @@ import org.jspecify.annotations.Nullable;
 
 public interface PgQueue {
 
-    String topic();
-
     void push(String message);
 
     void push(String message, Duration processDelay);

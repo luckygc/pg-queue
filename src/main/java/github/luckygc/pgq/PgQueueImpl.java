@@ -17,11 +17,6 @@ public class PgQueueImpl implements PgQueue {
     }
 
     @Override
-    public String topic() {
-        return topic;
-    }
-
-    @Override
     public void push(String message) {
         Message messageObj = Utils.buildMessageObj(topic, message, PgqConstants.MESSAGE_PRIORITY);
         queueDao.insertMessage(messageObj);

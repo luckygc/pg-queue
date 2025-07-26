@@ -1,6 +1,6 @@
 package github.luckygc.pgq.api;
 
-public interface MessageListener {
+public interface QueueListener {
 
     /**
      * 不允许阻塞

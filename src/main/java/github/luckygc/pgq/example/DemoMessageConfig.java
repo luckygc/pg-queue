@@ -6,7 +6,6 @@ import github.luckygc.pgq.api.PgqManager;
 import github.luckygc.pgq.api.ProcessingMessageManager;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
-import java.io.IOException;
 import java.time.Duration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -23,8 +22,13 @@ public class DemoMessageConfig {
                 new TransactionTemplate()
         );
 
-        QueueManager test = pgqManager.register("test");
-        QueueManager test2 = pgqManager.register("test2", new SingleMessageHandler() {
+        QueueManager testQueueManager = pgqManager.register("test");
+        testQueueManager.queue().push("""
+                {"name" : "xxx"}""");
+        testQueueManager.queue();
+
+
+        QueueManager testQueue2 = pgqManager.register("test2", new SingleMessageHandler() {
 
             @Override
             public int threadCount() {
@@ -33,12 +37,12 @@ public class DemoMessageConfig {
 
             @Override
             public void handle(ProcessingMessageManager messageManager, Message message) {
-                try {
-                    if (message.getPayload() == null) {
-                        messageManager.dead(message);
-                        return;
-                    }
+                if (message.getPayload() == null) {
+                    messageManager.delete(message);
+                    return;
+                }
 
+                try {
                     // handle
                 } catch (IllegalStateException e) {
                     Integer attempt = message.getAttempt();
@@ -51,8 +55,8 @@ public class DemoMessageConfig {
                     messageManager.dead(message);
                 }
 
-                messageManager.complete(message);
-                //  messageManager.delete(message);
+                messageManager.delete(message);
+                // messageManager.complete(message);
             }
         });
     }

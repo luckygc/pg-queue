@@ -1,7 +1,7 @@
 package github.luckygc.pgq;
 
 import github.luckygc.pgq.api.BatchMessageHandler;
-import github.luckygc.pgq.api.MessageListener;
+import github.luckygc.pgq.api.QueueListener;
 import github.luckygc.pgq.api.PgqManager;
 import github.luckygc.pgq.api.ProcessingMessageManager;
 import github.luckygc.pgq.api.QueueManager;
@@ -71,7 +71,7 @@ public class PgqManagerImpl implements PgqManager {
     }
 
     @Override
-    public QueueManager register(String topic, MessageListener messageListener) {
+    public QueueManager register(String topic, QueueListener messageListener) {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(messageListener);
 
@@ -96,8 +96,7 @@ public class PgqManagerImpl implements PgqManager {
             }
 
             PgQueueImpl pgQueue = new PgQueueImpl(queueDao, k);
-            MessageListener messageListener = new SingleMessageProcessor(pgQueue, processingMessageManager,
-                    messageHandler);
+            QueueListener messageListener = new SingleMessageProcessor(processingMessageManager, messageHandler);
             return new QueueManagerImpl(pgQueue, messageListener);
         });
     }
@@ -113,7 +112,7 @@ public class PgqManagerImpl implements PgqManager {
             }
 
             PgQueueImpl pgQueue = new PgQueueImpl(queueDao, k);
-            MessageListener messageListener = new BatchMessageProcessor(messageHandler);
+            QueueListener messageListener = new BatchMessageProcessor(messageHandler);
             return new QueueManagerImpl(pgQueue, messageListener);
         });
     }
@@ -183,13 +182,13 @@ public class PgqManagerImpl implements PgqManager {
             return;
         }
 
-        MessageListener messageListener = queueManager.messageListener();
+        QueueListener messageListener = queueManager.messageListener();
         if (messageListener == null) {
             return;
         }
 
         long start = System.currentTimeMillis();
-        messageListener.onMessageAvailable(queueManager.pgQueue());
+        messageListener.onMessageAvailable(queueManager.queue());
         long end = System.currentTimeMillis();
         if ((end - start) > MESSAGE_AVAILABLE_TIMEOUT_MILLIS) {
             logger.warn("onMessageAvailable方法执行时间过长,请不要阻塞调用, topic:{}", payload);
