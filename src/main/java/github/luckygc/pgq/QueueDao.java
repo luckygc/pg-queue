@@ -174,10 +174,11 @@ public class QueueDao {
                     returning id, create_time, topic, priority, payload, attempt
                 ),
                 insert_op as (
-                    insert into pgq_pending_queue (id, create_time, topic, priority, payload, attempt)
-                select id, create_time, topic, priority, payload, attempt from message_to_pending
-                )
-                select pg_notify('__pgq_queue__', topic) from pgq_pending_queue group by topic
+                    insert into pgq_pending_queue
+                          (id, create_time, topic, priority, payload, attempt)
+                    select id, create_time, topic, priority, payload, attempt from message_to_pending
+                ) select pg_notify('__pgq_queue__', topic) from pgq_pending_queue
+                       where (select locked from lock_result) group by topic
                 """;
         jdbcTemplate.update(sql, LocalDateTime.now());
     }
@@ -202,54 +203,68 @@ public class QueueDao {
 
         String sql = """
                 with message_to_process as (
-                    select * from pgq_pending_queue where topic = $1
-                                                     order by priority desc ,id limit $2 for update skip locked
-                ),insert_op as (
-                    insert into pgq_processing_queue (id, create_time, topic, priority, payload, attempt, process_time)
+                    select *
+                    from pgq_pending_queue
+                    where topic = $1
+                    order by priority desc ,id
+                    limit $2
+                    for update skip locked
+                ), insert_op as (
+                    insert into pgq_processing_queue
+                          (id, create_time, topic, priority, payload, attempt, process_time)
                     select id, create_time, topic, priority, payload, attempt, now() from message_to_process
-                )
-                delete from pgq_pending_queue where id in (select w.id from message_to_process w)
+                ) delete from pgq_pending_queue where id in (select w.id from message_to_process w)
                 returning id, create_time, topic, priority, payload, attempt
                 """;
         return jdbcTemplate.query(sql, messageMapper, topic, batchSize);
     }
 
-    public void deleteProcessingMessage(Message message) {
+    public void completeMessage(Message message, boolean delete) {
         Objects.requireNonNull(message);
 
-        jdbcTemplate.update("delete from pgq_processing_queue where id = $1", message.getId());
+        if (delete) {
+            jdbcTemplate.update("delete from pgq_processing_queue where id = $1", message.getId());
+        } else {
+            jdbcTemplate.update("""
+                    with message_to_complete as (
+                        delete from pgq_processing_queue where id = $1
+                        returning id, create_time, topic, priority, payload, attempt
+                    ) insert into pgq_complete_queue
+                          (id, create_time, topic, priority, payload, attempt, complete_time)
+                    select id, create_time, topic, priority, payload, attempt, now() from message_to_complete
+                    """, message.getId());
+        }
     }
 
-    public void deleteProcessingMessage(List<Message> messages) {
+    public void completeMessage(List<Message> messages, boolean delete) {
         Objects.requireNonNull(messages);
         if (messages.isEmpty()) {
             return;
         }
 
         if (messages.size() == 1) {
-            deleteProcessingMessage(messages.get(0));
+            completeMessage(messages.get(0), delete);
             return;
         }
 
-        jdbcTemplate.execute(deleteProcessingMessagePsCreator(messages), PreparedStatement::executeUpdate);
+        Long[] idArray = getIdArray(messages);
+
+        if (delete) {
+            jdbcTemplate.update("delete from pgq_processing_queue where id = any($1::bigint[])", new Object[]{idArray});
+        } else {
+            String sql = """
+                    with message_to_complete as (
+                        delete from pgq_processing_queue where id = any($1::bigint[])
+                        returning id, create_time, topic, priority, payload, attempt
+                    ) insert into pgq_complete_queue
+                           (id, create_time, topic, priority, payload, attempt, complete_time)
+                    select id, create_time, topic, priority, payload, attempt, now() from message_to_complete
+                    """;
+            jdbcTemplate.update(sql, new Object[]{idArray});
+        }
     }
 
-    private PreparedStatementCreator deleteProcessingMessagePsCreator(List<Message> messages) {
-        return con -> {
-            String sql = "delete from pgq_processing_queue where id = any($1)";
-            PreparedStatement ps = con.prepareStatement(sql);
-            Long[] ids = new Long[messages.size()];
-            int i = 0;
-            for (Message message : messages) {
-                ids[i++] = message.getId();
-            }
-
-            ps.setArray(1, con.createArrayOf("bigint", ids));
-            return ps;
-        };
-    }
-
-    public void moveProcessingToDead(Message message) {
+    public void deadMessage(Message message) {
         Objects.requireNonNull(message);
 
         String sql = """
@@ -265,34 +280,42 @@ public class QueueDao {
         jdbcTemplate.update(sql, message.getId());
     }
 
-    public void moveProcessingToDead(List<Message> messages) {
+    public void deadMessage(List<Message> messages) {
         Objects.requireNonNull(messages);
         if (messages.isEmpty()) {
             return;
         }
 
         if (messages.size() == 1) {
-            moveProcessingToDead(messages.get(0));
+            deadMessage(messages.get(0));
             return;
         }
 
-        jdbcTemplate.execute(moveProcessingToDeadPsCreator(messages), PreparedStatement::executeUpdate);
+        Long[] idArray = getIdArray(messages);
+        String sql = """
+                with message_to_dead as (
+                    delete from pgq_processing_queue where id = any($1::bigint[])
+                    returning id, create_time, topic, priority, payload, attempt
+                )
+                insert into pgq_dead_queue
+                (id, create_time, topic, priority, payload, attempt, dead_time)
+                select
+                 id, create_time, topic, priority, payload, attempt, now() from message_to_dead
+                """;
+
+        jdbcTemplate.update(sql, new Object[]{idArray});
     }
 
-    private PreparedStatementCreator moveProcessingToDeadPsCreator(List<Message> messages) {
-        return con -> {
-            String sql = """
-                    with message_to_dead as (
-                        delete from pgq_processing_queue where id = any($1)
-                        returning id, create_time, topic, priority, payload, attempt
-                    )
-                    insert into pgq_dead_queue
-                    (id, create_time, topic, priority, payload, attempt, dead_time)
-                    select
-                     id, create_time, topic, priority, payload, attempt, now() from message_to_dead
-                    """;
-            return createPsAndSetIdArray(con, sql, messages);
-        };
+    private Long[] getIdArray(List<Message> messages) {
+        Objects.requireNonNull(messages);
+
+        Long[] ids = new Long[messages.size()];
+        int i = 0;
+        for (Message message : messages) {
+            ids[i++] = message.getId();
+        }
+
+        return ids;
     }
 
     private PreparedStatement createPsAndSetIdArray(Connection con, String sql, List<Message> messages)
