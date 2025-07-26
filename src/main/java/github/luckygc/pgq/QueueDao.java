@@ -14,7 +14,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.RowMapper;
 
-class QueueDao {
+public class QueueDao {
 
     private static final String NEW_INSERT_INTO_PENDING = """
             insert into pgq_pending_queue
