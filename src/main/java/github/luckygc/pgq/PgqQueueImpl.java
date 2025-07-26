@@ -4,6 +4,7 @@ import github.luckygc.pgq.api.MessageGather;
 import github.luckygc.pgq.api.PgQueue;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -33,7 +34,7 @@ public class PgqQueueImpl implements PgQueue {
         if (message == null) {
             return;
         }
-        queueDao.insertMessage(buildMessageObj(message));
+        queueDao.insertMessage(buildMessageObj(message, PgqConstants.DEFAULT_PRIORITY));
     }
 
     @Override
@@ -42,61 +43,62 @@ public class PgqQueueImpl implements PgQueue {
             return;
         }
 
-        queueDao.insertMessages(buildMessageObjs(messages));
+        queueDao.insertMessages(buildMessageObjs(messages, PgqConstants.DEFAULT_PRIORITY));
     }
 
-    private Message buildMessageObj(String message) {
+    private Message buildMessageObj(String message, int priority) {
         Message messageObj = new Message();
         messageObj.setCreateTime(LocalDateTime.now());
         messageObj.setTopic(topic);
-        messageObj.setPriority(PgqConstants.DEFAULT_PRIORITY);
+        messageObj.setPriority(priority);
         messageObj.setPayload(message);
         messageObj.setAttempt(0);
         return messageObj;
     }
 
-    private List<Message> buildMessageObjs(List<String> messages) {
-        return messages.stream().map(this::buildMessageObj).toList();
+    private List<Message> buildMessageObjs(List<String> messages, int priority) {
+        List<Message> messagesObjs = new ArrayList<>(messages.size());
+        for (String message : messages) {
+            Message messageObj = new Message();
+            messageObj.setCreateTime(LocalDateTime.now());
+            messageObj.setTopic(topic);
+            messageObj.setPriority(priority);
+            messageObj.setPayload(message);
+            messageObj.setAttempt(0);
+            messagesObjs.add(messageObj);
+        }
+
+        return messagesObjs;
     }
 
     @Override
     public MessageGather message(@Nullable String message) {
-        return null;
+        return new MessageGatherImpl(message);
     }
 
     @Override
     public MessageGather messages(@Nullable List<String> messages) {
-        return null;
+        return new MessageGatherImpl(messages);
     }
 
     @Override
     public @Nullable Message pull() {
-        return null;
+        return queueDao.pull(topic);
     }
 
     @Override
     public List<Message> pull(int pullCount) {
-        return List.of();
+        return queueDao.pull(topic, pullCount);
     }
 
     @Override
-    public void delete(Message message) {
-
+    public void complete(Message message, boolean delete) {
+        queueDao.completeMessage(message, delete);
     }
 
     @Override
-    public void delete(List<Message> messages) {
-
-    }
-
-    @Override
-    public void complete(Message message) {
-
-    }
-
-    @Override
-    public void complete(List<Message> messages) {
-
+    public void complete(List<Message> messages, boolean delete) {
+        queueDao.completeMessage(messages, delete);
     }
 
     @Override
@@ -111,28 +113,27 @@ public class PgqQueueImpl implements PgQueue {
 
     @Override
     public void dead(Message message) {
-
+        queueDao.deadMessage(message);
     }
 
     @Override
     public void dead(List<Message> messages) {
-
+        queueDao.deadMessage(messages);
     }
 
-    public static class MessageGatherImpl implements MessageGather {
+    public class MessageGatherImpl implements MessageGather {
 
-        private final QueueDao queueDao;
-        private final List<String> messages;
+        private List<String> messages = null;
         private Integer priority;
         private Duration processDelay;
 
-        public MessageGatherImpl(QueueDao queueDao, String message) {
-            this.queueDao = queueDao;
-            this.messages = List.of(message);
+        public MessageGatherImpl(String message) {
+            if (message != null) {
+                this.messages = List.of(message);
+            }
         }
 
-        public MessageGatherImpl(QueueDao queueDao, List<String> messages) {
-            this.queueDao = queueDao;
+        public MessageGatherImpl(@Nullable List<String> messages) {
             this.messages = messages;
         }
 
@@ -143,14 +144,25 @@ public class PgqQueueImpl implements PgQueue {
         }
 
         @Override
-        public MessageGather processDelay(Duration delay) {
+        public MessageGather processDelay(@Nullable Duration delay) {
             this.processDelay = delay;
             return this;
         }
 
         @Override
         public void push() {
+            if (messages == null || messages.isEmpty()) {
+                return;
+            }
 
+            int finalPriority = this.priority == null ? PgqConstants.DEFAULT_PRIORITY : this.priority;
+
+            if (messages.size() == 1) {
+                queueDao.insertMessage(buildMessageObj(messages.get(0), finalPriority), processDelay);
+                return;
+            }
+
+            queueDao.insertMessages(buildMessageObjs(messages, finalPriority), processDelay);
         }
     }
 }
