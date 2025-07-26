@@ -124,14 +124,14 @@ public class QueueDao {
             """;
 
     private static final String MOVE_PROCESSING_MESSAGE_TO_INVISIBLE = """
-                    with message_to_retry as (
-                        delete from pgq_processing_queue where id = ?
-                        returning id, create_time, topic, priority, payload, attempt
-                    )
-                    insert into pgq_invisible_queue
-                          (id, create_time, topic, priority, payload, attempt, visible_time)
-                    select id, create_time, topic, priority, payload, attempt, ? from message_to_retry
-                    """;
+            with message_to_retry as (
+                delete from pgq_processing_queue where id = ?
+                returning id, create_time, topic, priority, payload, attempt
+            )
+            insert into pgq_invisible_queue
+                  (id, create_time, topic, priority, payload, attempt, visible_time)
+            select id, create_time, topic, priority, payload, attempt, ? from message_to_retry
+            """;
 
     private static final RowMapper<Message> messageMapper = (rs, ignore) -> {
         Message message = new Message();
@@ -145,7 +145,6 @@ public class QueueDao {
     };
 
     private static final RowMapper<Boolean> boolMapper = (rs, ignore) -> rs.getBoolean(1);
-
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate txTemplate;
@@ -161,10 +160,14 @@ public class QueueDao {
 
     public void insertMessage(Message message, @Nullable Duration processDelay) {
         Objects.requireNonNull(message);
-        checkDurationNotNegative(processDelay);
 
-        String sql = isProcessLater(processDelay) ? INSERT_INTO_INVISIBLE : INSERT_INTO_PENDING;
-        jdbcTemplate.update(sql, new InsertPsSetter(message, processDelay));
+        if (processDelay == null) {
+            jdbcTemplate.update(INSERT_INTO_PENDING, new InsertPsSetter(message, null));
+            return;
+        }
+
+        checkDurationIsPositive(processDelay);
+        jdbcTemplate.update(INSERT_INTO_INVISIBLE, new InsertPsSetter(message, processDelay));
     }
 
     public void insertMessages(List<Message> messages) {
@@ -173,24 +176,23 @@ public class QueueDao {
 
     public void insertMessages(List<Message> messages, @Nullable Duration processDelay) {
         Objects.requireNonNull(messages);
-        checkDurationNotNegative(processDelay);
-
         if (messages.isEmpty()) {
             return;
         }
 
-        String sql = isProcessLater(processDelay) ? INSERT_INTO_INVISIBLE : INSERT_INTO_PENDING;
-        jdbcTemplate.batchUpdate(sql, new BatchInsertPsSetter(messages, processDelay));
-    }
-
-    private void checkDurationNotNegative(@Nullable Duration processDelay) {
-        if (processDelay != null && processDelay.isNegative()) {
-            throw new IllegalArgumentException("processDelay必须大于等于0");
+        if (processDelay == null) {
+            jdbcTemplate.batchUpdate(INSERT_INTO_PENDING, new BatchInsertPsSetter(messages, processDelay));
+            return;
         }
+
+        checkDurationIsPositive(processDelay);
+        jdbcTemplate.batchUpdate(INSERT_INTO_INVISIBLE, new BatchInsertPsSetter(messages, processDelay));
     }
 
-    private static boolean isProcessLater(@Nullable Duration processDelay) {
-        return processDelay != null && !processDelay.isZero() && !processDelay.isNegative();
+    private void checkDurationIsPositive(Duration duration) {
+        if (duration.isNegative() || duration.isZero()) {
+            throw new IllegalArgumentException("duration必须大于0秒");
+        }
     }
 
     /**
@@ -199,7 +201,7 @@ public class QueueDao {
     public void schedule() {
         try {
             txTemplate.executeWithoutResult(ignore -> {
-                // 尝试获取事务意向锁
+                // 尝试获取锁
                 boolean locked = tryLockInTx(SCHEDULER_ID);
                 if (!locked) {
                     return;
@@ -318,30 +320,37 @@ public class QueueDao {
     public void retryMessage(Message message, @Nullable Duration processDelay) {
         Objects.requireNonNull(message);
 
-        checkDurationNotNegative(processDelay);
-        boolean isProcessLater = isProcessLater(processDelay);
-        if (isProcessLater) {
-            String sql = """
-                    with message_to_retry as (
-                        delete from pgq_processing_queue where id = $1
-                        returning id, create_time, topic, priority, payload, attempt
-                    )
-                    insert into pgq_dead_queue
-                    (id, create_time, topic, priority, payload, attempt, dead_time)
-                    select
-                     id, create_time, topic, priority, payload, attempt, now() from message_to_retry
-                    """;
-            jdbcTemplate.update(sql);
+        LocalDateTime nextVisibleTime = LocalDateTime.now();
+
+        if (processDelay != null) {
+            checkDurationIsPositive(processDelay);
+            nextVisibleTime = nextVisibleTime.plus(processDelay);
         }
+
+        jdbcTemplate.update(MOVE_PROCESSING_MESSAGE_TO_INVISIBLE, message.getId(), nextVisibleTime);
     }
 
-    @Nullable
-    private static LocalDateTime computeVisibleTime(Message message, Duration processDelay) {
-        if (isProcessLater(processDelay)) {
-            return message.getCreateTime().plus(processDelay);
+    public void retryMessages(List<Message> messages, @Nullable Duration processDelay) {
+        Objects.requireNonNull(messages);
+
+        LocalDateTime nextVisibleTime = LocalDateTime.now();
+
+        if (processDelay != null) {
+            checkDurationIsPositive(processDelay);
+            nextVisibleTime = nextVisibleTime.plus(processDelay);
         }
 
-        return null;
+        if (messages.isEmpty()) {
+            return;
+        }
+
+        Long[] idArray = getIdArray(messages);
+        jdbcTemplate.update(MOVE_PROCESSING_MESSAGE_TO_INVISIBLE, idArray, nextVisibleTime);
+    }
+
+    private static void insertPsSetter(PreparedStatement ps, Message message)
+            throws SQLException {
+        insertPsSetter(ps, message, null);
     }
 
     private static void insertPsSetter(PreparedStatement ps, Message message, LocalDateTime visibleTime)
@@ -360,7 +369,12 @@ public class QueueDao {
 
         @Override
         public void setValues(PreparedStatement ps) throws SQLException {
-            insertPsSetter(ps, message, computeVisibleTime(message, processDelay));
+            if (processDelay == null) {
+                insertPsSetter(ps, message);
+                return;
+            }
+
+            insertPsSetter(ps, message, message.getCreateTime().plus(processDelay));
         }
     }
 
@@ -370,7 +384,12 @@ public class QueueDao {
         @Override
         public void setValues(PreparedStatement ps, int i) throws SQLException {
             Message message = messages.get(i);
-            insertPsSetter(ps, message, computeVisibleTime(message, processDelay));
+            if (processDelay == null) {
+                insertPsSetter(ps, message);
+                return;
+            }
+
+            insertPsSetter(ps, message, message.getCreateTime().plus(processDelay));
         }
 
         @Override
