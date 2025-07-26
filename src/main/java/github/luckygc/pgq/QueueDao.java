@@ -141,6 +141,26 @@ public class QueueDao {
             select id, create_time, topic, priority, payload, attempt, ? from message_to_retry
             """;
 
+    // 移动到处理中消息到待处理队列重试
+    private static final String MOVE_PROCESSING_MESSAGE_TO_PENDING = """
+            with message_to_retry as (
+                delete from pgq_processing_queue where id = ?
+                returning id, create_time, topic, priority, payload, attempt
+            )
+            insert into pgq_pending_queue
+                  (id, create_time, topic, priority, payload, attempt)
+            select id, create_time, topic, priority, payload, attempt from message_to_retry
+            """;
+    private static final String BATCH_MOVE_PROCESSING_MESSAGES_TO_PENDING = """
+            with message_to_retry as (
+                delete from pgq_processing_queue where id = any(?::bigint[])
+                returning id, create_time, topic, priority, payload, attempt
+            )
+            insert into pgq_pending_queue
+                  (id, create_time, topic, priority, payload, attempt)
+            select id, create_time, topic, priority, payload, attempt from message_to_retry
+            """;
+
     private static final RowMapper<Message> messageMapper = (rs, ignore) -> {
         Message message = new Message();
         message.setId(rs.getLong(1));
@@ -287,29 +307,36 @@ public class QueueDao {
         jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_DEAD, new Object[]{idArray});
     }
 
-    public void retryProcessingMessage(Message message, @Nullable Duration processDelay) {
+    public void retryProcessingMessage(Message message) {
         Objects.requireNonNull(message);
 
-        LocalDateTime nextVisibleTime = computeNowPlusOptionalPositiveDuration(processDelay);
-        jdbcTemplate.update(MOVE_PROCESSING_MESSAGE_TO_INVISIBLE, message.getId(), nextVisibleTime);
+        jdbcTemplate.update(MOVE_PROCESSING_MESSAGE_TO_PENDING, message.getId());
     }
 
-    public void retryProcessingMessages(List<Message> messages, @Nullable Duration processDelay) {
+    public void retryProcessingMessage(Message message, Duration processDelay) {
+        Objects.requireNonNull(message);
+        Objects.requireNonNull(processDelay);
+        checkDurationIsPositive(processDelay);
+
+        jdbcTemplate.update(MOVE_PROCESSING_MESSAGE_TO_INVISIBLE, message.getId(),
+                LocalDateTime.now().plus(processDelay));
+    }
+
+    public void retryProcessingMessages(List<Message> messages) {
         Utils.checkMessagesNotEmpty(messages);
 
-        LocalDateTime nextVisibleTime = computeNowPlusOptionalPositiveDuration(processDelay);
         Long[] idArray = getIdArray(messages);
-        jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_INVISIBLE, idArray, nextVisibleTime);
+        jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_PENDING, new Object[]{idArray});
     }
 
-    private LocalDateTime computeNowPlusOptionalPositiveDuration(@Nullable Duration duration) {
-        LocalDateTime nextTime = LocalDateTime.now();
-        if (duration != null) {
-            checkDurationIsPositive(duration);
-            nextTime = nextTime.plus(duration);
-        }
+    public void retryProcessingMessages(List<Message> messages, Duration processDelay) {
+        Utils.checkMessagesNotEmpty(messages);
+        Objects.requireNonNull(processDelay);
+        checkDurationIsPositive(processDelay);
 
-        return nextTime;
+        Long[] idArray = getIdArray(messages);
+        jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_INVISIBLE, idArray,
+                LocalDateTime.now().plus(processDelay));
     }
 
     private Long[] getIdArray(List<Message> messages) {
