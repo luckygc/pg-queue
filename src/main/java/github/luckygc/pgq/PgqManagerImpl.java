@@ -9,6 +9,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
@@ -17,6 +20,8 @@ import org.postgresql.PGNotification;
 import org.postgresql.jdbc.PgConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 
 public class PgqManagerImpl implements PgqManager {
 
@@ -27,33 +32,42 @@ public class PgqManagerImpl implements PgqManager {
     private static final long firstReconnectDelayNanos = TimeUnit.SECONDS.toNanos(5);
     private static final int validConTimeoutSeconds = 1;
 
-    // 连接配置
+    private final Map<String, PgQueue> queueMap = new ConcurrentHashMap<>();
+
+    // 监听
     private final String jdbcUrl;
     private final String username;
     private final String password;
-
     private final AtomicBoolean listeningFlag = new AtomicBoolean(false);
     private volatile PgConnection con;
 
-    public PgqManagerImpl(String jdbcUrl, String username, String password) {
+    private final QueueDao queueDao;
+
+    public PgqManagerImpl(String jdbcUrl, String username, String password, JdbcTemplate jdbcTemplate,
+            TransactionTemplate transactionTemplate) {
         this.jdbcUrl = jdbcUrl;
         this.username = username;
         this.password = password;
+        this.queueDao = new QueueDao(jdbcTemplate, transactionTemplate);
     }
 
     @Override
     public PgQueue registerQueue(String topic) {
-        return null;
+        Objects.requireNonNull(topic);
+
+        return queueMap.compute(topic, (k, v) -> {
+            if (v != null) {
+                throw new IllegalStateException("重复注册,topic:%s".formatted(topic));
+            }
+
+            // TODO 新建PgQueue
+            return (PgQueue) null;
+        });
     }
 
     @Override
     public @Nullable PgQueue getQueue(String topic) {
-        return null;
-    }
-
-    @Override
-    public QueueDao queueDao() {
-        return null;
+        return queueMap.get(topic);
     }
 
     @Override
@@ -68,7 +82,9 @@ public class PgqManagerImpl implements PgqManager {
 
     @Override
     public void stopListen() {
-
+        if (!listeningFlag.compareAndSet(true, false)) {
+            throw new IllegalStateException("监听器未在运行");
+        }
     }
 
     private void listenLoop() {
@@ -96,6 +112,7 @@ public class PgqManagerImpl implements PgqManager {
                     reconnect();
                 }
             }
+            closeConnectionQuietly();
         }, "pgq-manager");
         listenerThread.setDaemon(true);
         listenerThread.start();
@@ -116,15 +133,6 @@ public class PgqManagerImpl implements PgqManager {
         LocalDateTime end = LocalDateTime.now();
         if (end.isAfter(start.plus(Duration.ofMinutes(1)))) {
             logger.warn("onMessageAvailable方法执行时间过长,请不要阻塞调用, topic:{}", payload);
-        }
-    }
-
-    /**
-     * 停止监听队列
-     */
-    public void stop() {
-        if (!listeningFlag.compareAndSet(true, false)) {
-            throw new IllegalStateException("监听器未在运行");
         }
     }
 

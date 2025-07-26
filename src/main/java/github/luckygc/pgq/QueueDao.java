@@ -22,7 +22,6 @@ public class QueueDao {
 
     private static final Logger log = LoggerFactory.getLogger(QueueDao.class);
 
-
     private static final String INSERT_INTO_PENDING = """
             insert into pgq_pending_queue
                 (create_time, topic, priority, payload, attempt)

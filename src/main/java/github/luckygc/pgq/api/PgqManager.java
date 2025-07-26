@@ -11,8 +11,6 @@ public interface PgqManager {
     @Nullable
     PgQueue getQueue(String topic);
 
-    QueueDao queueDao();
-
     void startListen() throws SQLException;
 
     void stopListen();
