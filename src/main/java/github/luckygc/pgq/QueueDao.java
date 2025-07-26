@@ -179,10 +179,7 @@ public class QueueDao {
     }
 
     public void insertMessages(List<Message> messages, @Nullable Duration processDelay) {
-        Objects.requireNonNull(messages);
-        if (messages.isEmpty()) {
-            return;
-        }
+        Utils.checkNotEmpty(messages);
 
         if (processDelay == null) {
             jdbcTemplate.batchUpdate(INSERT_INTO_PENDING, new BatchInsertPsSetter(messages, processDelay));
@@ -280,10 +277,7 @@ public class QueueDao {
     }
 
     public void completeMessages(List<Message> messages, boolean delete) {
-        Objects.requireNonNull(messages);
-        if (messages.isEmpty()) {
-            return;
-        }
+        Utils.checkNotEmpty(messages);
 
         Long[] idArray = getIdArray(messages);
 
@@ -294,6 +288,13 @@ public class QueueDao {
         }
     }
 
+    public void deleteProcessMessages(List<Message> messages) {
+        Utils.checkNotEmpty(messages);
+
+        Long[] idArray = getIdArray(messages);
+        jdbcTemplate.update(DELETE_PROCESSING_MESSAGES, new Object[]{idArray});
+    }
+
     public void deadMessage(Message message) {
         Objects.requireNonNull(message);
 
@@ -301,18 +302,13 @@ public class QueueDao {
     }
 
     public void deadMessages(List<Message> messages) {
-        Objects.requireNonNull(messages);
-        if (messages.isEmpty()) {
-            return;
-        }
+        Utils.checkNotEmpty(messages);
 
         Long[] idArray = getIdArray(messages);
         jdbcTemplate.update(MOVE_PROCESSING_MESSAGES_TO_DEAD, new Object[]{idArray});
     }
 
     private Long[] getIdArray(List<Message> messages) {
-        Objects.requireNonNull(messages);
-
         Long[] ids = new Long[messages.size()];
         int i = 0;
         for (Message message : messages) {
@@ -335,7 +331,7 @@ public class QueueDao {
     }
 
     public void retryMessages(List<Message> messages, @Nullable Duration processDelay) {
-        Objects.requireNonNull(messages);
+        Utils.checkNotEmpty(messages);
 
         LocalDateTime nextVisibleTime = LocalDateTime.now();
         if (processDelay != null) {
