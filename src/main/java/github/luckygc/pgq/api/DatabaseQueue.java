@@ -5,7 +5,7 @@ import java.time.Duration;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-public interface PgQueue {
+public interface DatabaseQueue {
 
     void push(String message);
 

@@ -22,14 +22,14 @@ public class DemoMessageConfig {
                 new TransactionTemplate()
         );
 
-        QueueManager testQueueManager = pgqManager.register("test");
+        QueueManager testQueueManager = pgqManager.registerListener("test");
         testQueueManager.queue().push("""
                 {"name" : "xxx"}""");
         testQueueManager.queue();
 
         String test2 = "test2";
 
-        QueueManager testQueue2 = pgqManager.register("test2", new SingleMessageHandler() {
+        QueueManager testQueue2 = pgqManager.registerListener("test2", new SingleMessageHandler() {
 
 
             @Override

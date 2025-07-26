@@ -4,7 +4,7 @@ import org.jspecify.annotations.Nullable;
 
 public interface QueueManager {
 
-    PgQueue queue();
+    DatabaseQueue queue();
 
     @Nullable
     QueueListener messageListener();

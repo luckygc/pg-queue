@@ -4,18 +4,18 @@ import github.luckygc.pgq.Message;
 import github.luckygc.pgq.PgqConstants;
 import github.luckygc.pgq.QueueDao;
 import github.luckygc.pgq.Utils;
-import github.luckygc.pgq.api.PgQueue;
+import github.luckygc.pgq.api.DatabaseQueue;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
-public class PgQueueImpl implements PgQueue {
+public class DatabaseQueueImpl implements DatabaseQueue {
 
     private final QueueDao queueDao;
     private final String topic;
 
-    public PgQueueImpl(QueueDao queueDao, String topic) {
+    public DatabaseQueueImpl(QueueDao queueDao, String topic) {
         this.queueDao = Objects.requireNonNull(queueDao);
         this.topic = Objects.requireNonNull(topic);
     }

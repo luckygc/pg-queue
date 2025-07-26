@@ -2,7 +2,7 @@ package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.Message;
 import github.luckygc.pgq.api.MessageManager;
-import github.luckygc.pgq.api.PgQueue;
+import github.luckygc.pgq.api.DatabaseQueue;
 import github.luckygc.pgq.api.QueueListener;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import java.util.List;
@@ -29,7 +29,7 @@ public class SingleMessageProcessor implements QueueListener {
     }
 
     @Override
-    public void onMessageAvailable(PgQueue queue) {
+    public void onMessageAvailable(DatabaseQueue queue) {
         if (!semaphore.tryAcquire()) {
             return;
         }
