@@ -15,19 +15,19 @@ public interface PgQueue {
 
     void push(String message);
 
-    void push(String message, @Nullable Duration processDelay);
+    void push(String message, Duration processDelay);
 
     void push(String message, int priority);
 
-    void push(String message, @Nullable Duration processDelay, int priority);
+    void push(String message, Duration processDelay, int priority);
 
     void push(List<String> messages);
 
-    void push(List<String> messages, @Nullable Duration processDelay);
+    void push(List<String> messages, Duration processDelay);
 
     void push(List<String> messages, int priority);
 
-    void push(List<String> messages, @Nullable Duration processDelay, int priority);
+    void push(List<String> messages, Duration processDelay, int priority);
 
     @Nullable
     Message pull();
