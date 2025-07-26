@@ -71,6 +71,21 @@ public class PgqManagerImpl implements PgqManager {
     }
 
     @Override
+    public QueueManager register(String topic, MessageListener messageListener) {
+        Objects.requireNonNull(topic);
+        Objects.requireNonNull(messageListener);
+
+        return queueMap.compute(topic, (k, v) -> {
+            if (v != null) {
+                throw new IllegalStateException("重复注册,topic:%s".formatted(topic));
+            }
+
+            PgQueueImpl pgQueue = new PgQueueImpl(queueDao, k);
+            return new QueueManagerImpl(pgQueue, messageListener);
+        });
+    }
+
+    @Override
     public QueueManager register(String topic, SingleMessageHandler messageHandler) {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(messageHandler);

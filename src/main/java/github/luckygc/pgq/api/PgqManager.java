@@ -7,6 +7,8 @@ public interface PgqManager {
 
     QueueManager register(String topic);
 
+    QueueManager register(String topic, MessageListener messageListener);
+
     QueueManager register(String topic, SingleMessageHandler messageHandler);
 
     QueueManager register(String topic, BatchMessageHandler messageHandler);
