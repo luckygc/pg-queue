@@ -14,5 +14,5 @@ public interface PgqManager {
     @Nullable
     MessageProcessor getMessageProcessor(String topic);
 
-    MessageManager messageManager();
+    ProcessingMessageManager messageManager();
 }

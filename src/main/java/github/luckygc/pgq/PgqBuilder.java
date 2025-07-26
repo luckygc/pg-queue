@@ -5,7 +5,8 @@ import github.luckygc.pgq.api.PgQueue;
 
 public class PgqBuilder {
 
-    private String topic;
+    String topic;
+    QueueDao queueDao;
     private MessageProcessor messageProcessor;
 
 

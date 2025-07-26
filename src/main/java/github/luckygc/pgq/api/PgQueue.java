@@ -1,20 +1,31 @@
 package github.luckygc.pgq.api;
 
 import github.luckygc.pgq.Message;
+import java.time.Duration;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-public interface PgQueue extends MessageManager {
+public interface PgQueue {
+
+    ProcessingMessageManager processingMessageManager();
 
     String getTopic();
 
-    void push(@Nullable String message);
+    void push(String message);
 
-    void push(@Nullable List<String> messages);
+    void push(String message, @Nullable Duration processDelay);
 
-    MessageGather message(@Nullable String message);
+    void push(String message, int priority);
 
-    MessageGather messages(@Nullable List<String> messages);
+    void push(String message, @Nullable Duration processDelay, int priority);
+
+    void push(List<String> messages);
+
+    void push(List<String> messages, @Nullable Duration processDelay);
+
+    void push(List<String> messages, int priority);
+
+    void push(List<String> messages, @Nullable Duration processDelay, int priority);
 
     @Nullable
     Message pull();
