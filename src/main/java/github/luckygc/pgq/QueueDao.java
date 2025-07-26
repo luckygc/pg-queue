@@ -168,7 +168,7 @@ public class QueueDao {
 
     public void insertMessage(Message message, Duration processDelay) {
         Objects.requireNonNull(message);
-
+        Objects.requireNonNull(processDelay);
         checkDurationIsPositive(processDelay);
         jdbcTemplate.update(INSERT_INTO_INVISIBLE, new InsertPsSetter(message, processDelay));
     }
@@ -180,7 +180,7 @@ public class QueueDao {
 
     public void insertMessages(List<Message> messages, Duration processDelay) {
         Utils.checkMessagesNotEmpty(messages);
-
+        Objects.requireNonNull(processDelay);
         checkDurationIsPositive(processDelay);
         jdbcTemplate.batchUpdate(INSERT_INTO_INVISIBLE, new BatchInsertPsSetter(messages, processDelay));
     }
@@ -230,8 +230,8 @@ public class QueueDao {
 
     public List<Message> pull(String topic, int batchSize, Duration processTimeout) {
         Objects.requireNonNull(topic);
+        Objects.requireNonNull(processTimeout);
         checkDurationIsPositive(processTimeout);
-
         LocalDateTime timeoutTime = computeNowPlusOptionalPositiveDuration(processTimeout);
 
         return txTemplate.execute(ignore -> {
