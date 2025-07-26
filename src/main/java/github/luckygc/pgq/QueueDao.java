@@ -238,9 +238,6 @@ public class QueueDao {
 
     public List<Message> pull(String topic, int batchSize) {
         Objects.requireNonNull(topic);
-        if (batchSize < 1 || batchSize > 5000) {
-            throw new IllegalArgumentException("batch必须在[1-5000]之间");
-        }
 
         String sql = """
                 with message_to_process as (
