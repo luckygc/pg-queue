@@ -7,6 +7,8 @@ import org.jspecify.annotations.Nullable;
 
 public interface PgQueue {
 
+    String topic();
+
     ProcessingMessageManager processingMessageManager();
 
     void registerMessageListener(MessageListener messageListener);
