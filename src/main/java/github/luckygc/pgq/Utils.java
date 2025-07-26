@@ -34,4 +34,10 @@ public class Utils {
 
         return messagesObjs;
     }
+
+    public static void checkNotEmpty(List<Message> messages) {
+        if (messages == null || messages.isEmpty()) {
+            throw new IllegalArgumentException("messages不能为空");
+        }
+    }
 }
