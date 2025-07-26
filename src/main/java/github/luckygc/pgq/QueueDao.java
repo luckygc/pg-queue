@@ -59,14 +59,13 @@ class QueueDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public void insertMessage(@Nullable Message message) {
+    public void insertMessage(Message message) {
         insertMessage(message, null);
     }
 
-    public void insertMessage(@Nullable Message message, @Nullable Duration processDelay) {
-        if (message == null) {
-            return;
-        }
+    public void insertMessage(Message message, @Nullable Duration processDelay) {
+        Objects.requireNonNull(message);
+        checkProcessDelay(processDelay);
 
         jdbcTemplate.execute(insertPsCreator(message, processDelay), PreparedStatement::executeUpdate);
     }
@@ -74,7 +73,7 @@ class QueueDao {
     private PreparedStatementCreator insertPsCreator(Message message, Duration processDelay) {
         return con -> {
             String sql = NEW_INSERT_INTO_PENDING;
-            boolean isProcessLater = processDelay != null && !processDelay.isZero() && !processDelay.isNegative();
+            boolean isProcessLater = processDelay != null && !processDelay.isZero();
             if (isProcessLater) {
                 sql = NEW_INSERT_INTO_INVISIBLE;
             }
@@ -94,12 +93,14 @@ class QueueDao {
         };
     }
 
-    public void insertMessages(@Nullable List<Message> messages) {
+    public void insertMessages(List<Message> messages) {
         insertMessages(messages, null);
     }
 
-    public void insertMessages(@Nullable List<Message> messages, @Nullable Duration processDelay) {
-        if (messages == null || messages.isEmpty()) {
+    public void insertMessages(List<Message> messages, @Nullable Duration processDelay) {
+        Objects.requireNonNull(messages);
+
+        if (messages.isEmpty()) {
             return;
         }
 
@@ -108,13 +109,20 @@ class QueueDao {
             return;
         }
 
+        checkProcessDelay(processDelay);
         jdbcTemplate.execute(batchInsertPsCreator(messages, processDelay), PreparedStatement::executeUpdate);
+    }
+
+    private void checkProcessDelay(@Nullable Duration processDelay) {
+        if (processDelay != null && processDelay.isNegative()) {
+            throw new IllegalArgumentException("processDelay必须大于0");
+        }
     }
 
     private PreparedStatementCreator batchInsertPsCreator(List<Message> messages, @Nullable Duration processDelay) {
         return con -> {
             String sql = NEW_BATCH_INSERT_INTO_PENDING;
-            boolean isProcessLater = processDelay != null && !processDelay.isZero() && !processDelay.isNegative();
+            boolean isProcessLater = processDelay != null && !processDelay.isZero();
             if (isProcessLater) {
                 sql = NEW_BATCH_INSERT_INTO_INVISIBLE;
             }
@@ -155,7 +163,7 @@ class QueueDao {
     }
 
     /**
-     * 批量把到时间的不可见消息移入带出了队列
+     * 批量把到时间的不可见消息移入待处理队列
      */
     public void schedule() {
         String sql = """
