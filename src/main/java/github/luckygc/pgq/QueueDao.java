@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.RowMapper;
@@ -14,8 +16,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 public class QueueDao {
 
+    private static final Logger log = LoggerFactory.getLogger(QueueDao.class);
     private static final long PGQ_ID = 199738;
     private static final long SCHEDULER_ID = 1;
+    private static final String CHANNEL_NAME = "pgq_channel";
 
     private static final String NEW_INSERT_INTO_PENDING = """
             insert into pgq_pending_queue
@@ -55,6 +59,7 @@ public class QueueDao {
     };
 
     private static final RowMapper<Boolean> boolMapper = (rs, ignore) -> rs.getBoolean(1);
+
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate txTemplate;
@@ -175,26 +180,45 @@ public class QueueDao {
      * 批量把到时间的不可见消息移入待处理队列,把处理超时任务重新移回待处理队列,并发送通知提醒有可用消息
      */
     public void schedule() {
-        String sql = """
-                WITH lock_result AS (
-                  SELECT pg_try_advisory_xact_lock(654321) AS locked
-                ),
-                message_to_pending as (
-                    delete from pgq_invisible_queue where visible_time <= $1 and (select locked from lock_result)
-                    returning id, create_time, topic, priority, payload, attempt
-                ),
-                insert_op as (
-                    insert into pgq_pending_queue
-                          (id, create_time, topic, priority, payload, attempt)
-                    select id, create_time, topic, priority, payload, attempt from message_to_pending
-                ) select pg_notify('__pgq_queue__', topic) from pgq_pending_queue
-                       where (select locked from lock_result) group by topic
-                """;
-
-        jdbcTemplate.update(sql, LocalDateTime.now());
+        try {
+            txTemplate.executeWithoutResult(ignore -> scheduleInternal());
+        } catch (Throwable t) {
+            log.error("调度失败", t);
+        }
     }
 
-    public boolean tryLockInTx(long objId) {
+    private void scheduleInternal() {
+        // 尝试获取锁
+        boolean locked = tryLockInTx(SCHEDULER_ID);
+        if (!locked) {
+            return;
+        }
+
+        // 将当前可见消息插入到待处理队列并删除
+        {
+            String sql = """
+                    with message_to_pending as (
+                        delete from pgq_invisible_queue where visible_time <= $1
+                        returning id, create_time, topic, priority, payload, attempt
+                    ) insert into pgq_pending_queue
+                              (id, create_time, topic, priority, payload, attempt)
+                        select id, create_time, topic, priority, payload, attempt from message_to_pending
+                    """;
+            jdbcTemplate.update(sql, LocalDateTime.now());
+        }
+
+        // 查询待处理topic并发出通知
+        {
+            String sql = """
+                    with topic_to_notify as (
+                        select distinct topic from pgq_pending_queue
+                    ) select pg_notify($1, topic) from topic_to_notify
+                    """;
+            jdbcTemplate.update(sql, CHANNEL_NAME);
+        }
+    }
+
+    private boolean tryLockInTx(long objId) {
         String sql = "SELECT pg_try_advisory_xact_lock($1, $2) AS locked";
         Boolean locked = jdbcTemplate.queryForObject(sql, boolMapper, PGQ_ID, objId);
         return Boolean.TRUE.equals(locked);
