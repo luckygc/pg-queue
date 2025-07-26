@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.NonNull;
@@ -166,19 +167,19 @@ public class QueueDao {
         jdbcTemplate.update(INSERT_INTO_PENDING, new InsertPsSetter(message, null));
     }
 
-    public void insertMessage(Message message, Duration processDelay) {
+    public void insertMessages(List<Message> messages) {
+        Utils.checkMessagesNotEmpty(messages);
+        jdbcTemplate.batchUpdate(INSERT_INTO_PENDING, new BatchInsertPsSetter(messages, null));
+    }
+
+    public void insertProcessLaterMessage(Message message, Duration processDelay) {
         Objects.requireNonNull(message);
         Objects.requireNonNull(processDelay);
         checkDurationIsPositive(processDelay);
         jdbcTemplate.update(INSERT_INTO_INVISIBLE, new InsertPsSetter(message, processDelay));
     }
 
-    public void insertMessages(List<Message> messages) {
-        Utils.checkMessagesNotEmpty(messages);
-        jdbcTemplate.batchUpdate(INSERT_INTO_PENDING, new BatchInsertPsSetter(messages, null));
-    }
-
-    public void insertMessages(List<Message> messages, Duration processDelay) {
+    public void insertProcessLaterMessages(List<Message> messages, Duration processDelay) {
         Utils.checkMessagesNotEmpty(messages);
         Objects.requireNonNull(processDelay);
         checkDurationIsPositive(processDelay);
@@ -218,23 +219,14 @@ public class QueueDao {
         }
     }
 
-    @Nullable
-    public Message pull(String topic, Duration processTimeout) {
-        List<Message> messages = pull(topic, 1, processTimeout);
-        if (messages.isEmpty()) {
-            return null;
-        }
-
-        return messages.get(0);
-    }
-
     public List<Message> pull(String topic, int batchSize, Duration processTimeout) {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(processTimeout);
         checkDurationIsPositive(processTimeout);
-        LocalDateTime timeoutTime = computeNowPlusOptionalPositiveDuration(processTimeout);
 
-        return txTemplate.execute(ignore -> {
+        LocalDateTime timeoutTime = LocalDateTime.now().plus(processTimeout);
+
+        List<Message> messageObjs = txTemplate.execute(ignore -> {
             List<Message> messages = jdbcTemplate.query(
                     FIND_PENDING_MESSAGES_SKIP_LOCKED,
                     messageMapper,
@@ -247,8 +239,10 @@ public class QueueDao {
 
             Long[] idArray = getIdArray(messages);
             jdbcTemplate.update(BATCH_MOVE_PENDING_MESSAGES_TO_PROCESSING, idArray, timeoutTime);
-            return messages;
+            return Objects.requireNonNull(messages);
         });
+
+        return messageObjs == null ? Collections.emptyList() : messageObjs;
     }
 
     public void deleteProcessingMessage(Message message) {
