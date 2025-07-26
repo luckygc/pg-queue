@@ -21,11 +21,23 @@ public interface ProcessingMessageManager {
 
     void delete(List<Message> messages);
 
+    /**
+     * 立即重试
+     */
     void retry(Message message);
 
+    /**
+     * 延迟重试
+     */
     void retry(Message message, Duration processDelay);
 
+    /**
+     * 立即重试
+     */
     void retry(List<Message> messages);
 
+    /**
+     * 延迟重试
+     */
     void retry(List<Message> messages, Duration processDelay);
 }
