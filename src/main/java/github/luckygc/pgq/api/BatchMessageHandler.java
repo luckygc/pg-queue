@@ -4,7 +4,6 @@ import github.luckygc.pgq.Message;
 import github.luckygc.pgq.PgqConstants;
 import java.util.List;
 
-@FunctionalInterface
 public interface BatchMessageHandler {
 
     default int pullCount() {
@@ -14,6 +13,8 @@ public interface BatchMessageHandler {
     default int threadCount() {
         return PgqConstants.MESSAGE_HANDLER_THREAD_COUNT;
     }
+
+    String topic();
 
     void handle(List<Message> messages);
 }

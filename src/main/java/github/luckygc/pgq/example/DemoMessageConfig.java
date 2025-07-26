@@ -27,11 +27,19 @@ public class DemoMessageConfig {
                 {"name" : "xxx"}""");
         testQueueManager.queue();
 
+        String test2 = "test2";
+
         QueueManager testQueue2 = pgqManager.register("test2", new SingleMessageHandler() {
+
 
             @Override
             public int threadCount() {
                 return 8;
+            }
+
+            @Override
+            public String topic() {
+                return "test2";
             }
 
             @Override

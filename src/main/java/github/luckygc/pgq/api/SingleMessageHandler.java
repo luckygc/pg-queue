@@ -3,7 +3,6 @@ package github.luckygc.pgq.api;
 import github.luckygc.pgq.Message;
 import github.luckygc.pgq.PgqConstants;
 
-@FunctionalInterface
 public interface SingleMessageHandler {
 
     default int pullCount() {
@@ -13,6 +12,8 @@ public interface SingleMessageHandler {
     default int threadCount() {
         return PgqConstants.MESSAGE_HANDLER_THREAD_COUNT;
     }
+
+    String topic();
 
     void handle(MessageManager messageManager, Message message);
 }

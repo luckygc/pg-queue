@@ -25,6 +25,11 @@ public class BatchMessageQueueListener implements QueueListener {
     }
 
     @Override
+    public String topic() {
+        return "";
+    }
+
+    @Override
     public void onMessageAvailable(PgQueue queue) {
         if (!semaphore.tryAcquire()) {
             return;
