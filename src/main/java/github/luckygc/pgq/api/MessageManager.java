@@ -6,13 +6,9 @@ import java.util.List;
 
 public interface MessageManager {
 
-    void delete(Message message);
+    void complete(Message message, boolean delete);
 
-    void delete(List<Message> messages);
-
-    void complete(Message message);
-
-    void complete(List<Message> messages);
+    void complete(List<Message> messages, boolean delete);
 
     void retry(Message message, Duration processDelay);
 
