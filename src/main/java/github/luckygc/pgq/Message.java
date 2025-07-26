@@ -1,41 +1,54 @@
 package github.luckygc.pgq;
 
 import java.time.LocalDateTime;
+import org.jspecify.annotations.Nullable;
 
 public class Message {
 
+    @Nullable
     private Long id;
 
+    @Nullable
     private LocalDateTime createTime;
 
+    @Nullable
     private String payload;
 
+    @Nullable
     private String topic;
 
+    @Nullable
     private Integer priority;
 
+    @Nullable
     private Integer attempt;
 
+    @Nullable
     public Long getId() {
         return id;
     }
 
+    @Nullable
     public LocalDateTime getCreateTime() {
         return createTime;
     }
 
+    @Nullable
     public String getPayload() {
         return payload;
     }
 
+    @Nullable
     public String getTopic() {
         return topic;
     }
 
+    @Nullable
     public Integer getPriority() {
         return priority;
     }
 
+    @Nullable
     public Integer getAttempt() {
         return attempt;
     }
