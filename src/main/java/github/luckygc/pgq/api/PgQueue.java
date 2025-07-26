@@ -19,5 +19,8 @@ public interface PgQueue extends MessageManager {
     @Nullable
     Message pull();
 
+    /**
+     * @param pullCount 拉取数量，范围[1,5000]
+     */
     List<Message> pull(int pullCount);
 }
