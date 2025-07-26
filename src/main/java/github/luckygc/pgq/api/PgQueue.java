@@ -11,8 +11,6 @@ public interface PgQueue {
 
     ProcessingMessageManager processingMessageManager();
 
-    void registerMessageListener(MessageListener messageListener);
-
     MessageListener messageListener();
 
     void push(String message);
