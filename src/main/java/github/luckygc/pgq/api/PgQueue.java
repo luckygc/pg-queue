@@ -11,6 +11,7 @@ public interface PgQueue {
 
     ProcessingMessageManager processingMessageManager();
 
+    @Nullable
     MessageListener messageListener();
 
     void push(String message);
