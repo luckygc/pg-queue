@@ -3,6 +3,7 @@ package github.luckygc.pgq;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Utils {
 
@@ -10,6 +11,9 @@ public class Utils {
     }
 
     public static Message buildMessageObj(String topic, String message, int priority) {
+        Objects.requireNonNull(topic);
+        Objects.requireNonNull(message);
+
         Message messageObj = new Message();
         messageObj.setCreateTime(LocalDateTime.now());
         messageObj.setTopic(topic);
@@ -20,6 +24,9 @@ public class Utils {
     }
 
     public static List<Message> buildMessageObjs(String topic, List<String> messages, int priority) {
+        Objects.requireNonNull(topic);
+        Utils.checkNotEmpty(messages);
+
         List<Message> messagesObjs = new ArrayList<>(messages.size());
         LocalDateTime now = LocalDateTime.now();
         for (String message : messages) {
@@ -35,7 +42,7 @@ public class Utils {
         return messagesObjs;
     }
 
-    public static void checkNotEmpty(List<Message> messages) {
+    public static void checkNotEmpty(List<?> messages) {
         if (messages == null || messages.isEmpty()) {
             throw new IllegalArgumentException("messages不能为空");
         }
