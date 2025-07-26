@@ -1,6 +1,5 @@
-package github.luckygc.pgq.support;
+package github.luckygc.pgq;
 
-import github.luckygc.pgq.Message;
 import github.luckygc.pgq.api.BatchMessageHandler;
 import github.luckygc.pgq.api.MessageListener;
 import github.luckygc.pgq.api.PgQueue;
@@ -14,23 +13,16 @@ public class BatchMessageProcessor implements MessageListener {
 
     private static final Logger log = LoggerFactory.getLogger(BatchMessageProcessor.class);
     private final Semaphore semaphore;
-    private final int pullCount;
     private final PgQueue pgQueue;
     private final BatchMessageHandler messageHandler;
 
-    public BatchMessageProcessor(PgQueue pgQueue, BatchMessageHandler messageHandler, int pullCount,
-            int threadCount) {
+    public BatchMessageProcessor(PgQueue pgQueue, BatchMessageHandler messageHandler) {
         this.pgQueue = Objects.requireNonNull(pgQueue);
         this.messageHandler = Objects.requireNonNull(messageHandler);
-        if (pullCount < 1) {
-            throw new IllegalArgumentException("pullCount必须大于0");
-        }
-        this.pullCount = pullCount;
-
-        if (threadCount < 1) {
+        if (messageHandler.threadCount() < 1) {
             throw new IllegalArgumentException("threadCount必须大于0");
         }
-        this.semaphore = new Semaphore(threadCount);
+        this.semaphore = new Semaphore(messageHandler.threadCount());
     }
 
     @Override
@@ -42,7 +34,7 @@ public class BatchMessageProcessor implements MessageListener {
         Runnable r = () -> {
             try {
                 List<Message> messages;
-                while (!(messages = pgQueue.pull(pullCount)).isEmpty()) {
+                while (!(messages = pgQueue.pull(messageHandler.pullCount())).isEmpty()) {
                     try {
                         messageHandler.handle(messages);
                     } catch (Throwable t) {
