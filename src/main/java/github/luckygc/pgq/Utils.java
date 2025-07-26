@@ -25,7 +25,7 @@ public class Utils {
 
     public static List<Message> buildMessageObjs(String topic, List<String> messages, int priority) {
         Objects.requireNonNull(topic);
-        Utils.checkNotEmpty(messages);
+        Utils.checkMessagesNotEmpty(messages);
 
         List<Message> messagesObjs = new ArrayList<>(messages.size());
         LocalDateTime now = LocalDateTime.now();
@@ -42,7 +42,7 @@ public class Utils {
         return messagesObjs;
     }
 
-    public static void checkNotEmpty(List<?> messages) {
+    public static void checkMessagesNotEmpty(List<?> messages) {
         if (messages == null || messages.isEmpty()) {
             throw new IllegalArgumentException("messages不能为空");
         }

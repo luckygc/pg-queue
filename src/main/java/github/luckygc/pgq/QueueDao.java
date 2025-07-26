@@ -174,12 +174,12 @@ public class QueueDao {
     }
 
     public void insertMessages(List<Message> messages) {
-        Utils.checkNotEmpty(messages);
+        Utils.checkMessagesNotEmpty(messages);
         jdbcTemplate.batchUpdate(INSERT_INTO_PENDING, new BatchInsertPsSetter(messages, null));
     }
 
     public void insertMessages(List<Message> messages, Duration processDelay) {
-        Utils.checkNotEmpty(messages);
+        Utils.checkMessagesNotEmpty(messages);
 
         checkDurationIsPositive(processDelay);
         jdbcTemplate.batchUpdate(INSERT_INTO_INVISIBLE, new BatchInsertPsSetter(messages, processDelay));
@@ -258,7 +258,7 @@ public class QueueDao {
     }
 
     public void deleteProcessingMessages(List<Message> messages) {
-        Utils.checkNotEmpty(messages);
+        Utils.checkMessagesNotEmpty(messages);
 
         Long[] idArray = getIdArray(messages);
         jdbcTemplate.update(BATCH_DELETE_PROCESSING_MESSAGES, new Object[]{idArray});
@@ -271,7 +271,7 @@ public class QueueDao {
     }
 
     public void completeProcessingMessages(List<Message> messages) {
-        Utils.checkNotEmpty(messages);
+        Utils.checkMessagesNotEmpty(messages);
 
         Long[] idArray = getIdArray(messages);
         jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_COMPLETE, new Object[]{idArray});
@@ -284,7 +284,7 @@ public class QueueDao {
     }
 
     public void deadProcessingMessages(List<Message> messages) {
-        Utils.checkNotEmpty(messages);
+        Utils.checkMessagesNotEmpty(messages);
 
         Long[] idArray = getIdArray(messages);
         jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_DEAD, new Object[]{idArray});
@@ -298,7 +298,7 @@ public class QueueDao {
     }
 
     public void retryProcessingMessages(List<Message> messages, @Nullable Duration processDelay) {
-        Utils.checkNotEmpty(messages);
+        Utils.checkMessagesNotEmpty(messages);
 
         LocalDateTime nextVisibleTime = computeNowPlusOptionalPositiveDuration(processDelay);
         Long[] idArray = getIdArray(messages);
