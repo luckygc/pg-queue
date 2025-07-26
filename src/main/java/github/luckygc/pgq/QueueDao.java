@@ -219,8 +219,11 @@ public class QueueDao {
         }
     }
 
-    public List<Message> pull(String topic, int batchSize, Duration processTimeout) {
+    public List<Message> pull(String topic, int pullCount, Duration processTimeout) {
         Objects.requireNonNull(topic);
+        if (pullCount < 1) {
+            throw new IllegalArgumentException("pullCount必须大于0");
+        }
         Objects.requireNonNull(processTimeout);
         checkDurationIsPositive(processTimeout);
 
@@ -231,7 +234,7 @@ public class QueueDao {
                     FIND_PENDING_MESSAGES_SKIP_LOCKED,
                     messageMapper,
                     topic,
-                    batchSize);
+                    pullCount);
 
             if (messages.isEmpty()) {
                 return messages;
