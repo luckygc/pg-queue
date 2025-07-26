@@ -1,27 +1,62 @@
-package github.luckygc.pgq.impl;
+package github.luckygc.pgq;
 
-import github.luckygc.pgq.Message;
 import github.luckygc.pgq.api.MessageGather;
 import github.luckygc.pgq.api.PgQueue;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import org.springframework.util.StringUtils;
 
 public class PgqQueueImpl implements PgQueue {
 
+    private final String topic;
+    private final QueueDao queueDao;
+
+    public PgqQueueImpl(PgqBuilder pgqBuilder) {
+        if (!StringUtils.hasText(pgqBuilder.topic)) {
+            throw new IllegalArgumentException("topic不能为空");
+        }
+
+        this.topic = pgqBuilder.topic;
+        this.queueDao = Objects.requireNonNull(pgqBuilder.queueDao);
+    }
+
     @Override
     public String getTopic() {
-        return "";
+        return topic;
     }
 
     @Override
     public void push(@Nullable String message) {
-
+        if (message == null) {
+            return;
+        }
+        queueDao.insertMessage(buildMessageObj(message));
     }
 
     @Override
     public void push(@Nullable List<String> messages) {
+        if (messages == null) {
+            return;
+        }
 
+        queueDao.insertMessages(buildMessageObjs(messages));
+    }
+
+    private Message buildMessageObj(String message) {
+        Message messageObj = new Message();
+        messageObj.setCreateTime(LocalDateTime.now());
+        messageObj.setTopic(topic);
+        messageObj.setPriority(PgqConstants.DEFAULT_PRIORITY);
+        messageObj.setPayload(message);
+        messageObj.setAttempt(0);
+        return messageObj;
+    }
+
+    private List<Message> buildMessageObjs(List<String> messages) {
+        return messages.stream().map(this::buildMessageObj).toList();
     }
 
     @Override
