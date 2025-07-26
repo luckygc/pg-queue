@@ -9,8 +9,6 @@ public interface PgQueue {
 
     ProcessingMessageManager processingMessageManager();
 
-    String getTopic();
-
     void registerMessageListener(MessageListener messageListener);
 
     MessageListener messageListener();
