@@ -47,6 +47,18 @@ create table pgq_processing_queue
 
 create index idx_pgq_processing_queue_process_time on pgq_processing_queue using btree (process_time);
 
+drop table if exists pgq_complete_queue;
+create table pgq_complete_queue
+(
+    id            bigint primary key,
+    create_time   timestamp                not null,
+    topic         varchar(100) collate "C" not null,
+    priority      int                      not null,
+    payload       varchar collate "C"      not null,
+    attempt       int                      not null,
+    complete_time timestamp                not null
+);
+
 drop table if exists pgq_dead_queue;
 create table pgq_dead_queue
 (
