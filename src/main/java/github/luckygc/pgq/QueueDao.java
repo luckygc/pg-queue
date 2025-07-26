@@ -8,7 +8,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
@@ -183,15 +182,16 @@ public class QueueDao {
         jdbcTemplate.update(sql, LocalDateTime.now());
     }
 
-    public Optional<Message> pull(String topic) {
+    @Nullable
+    public Message pull(String topic) {
         Objects.requireNonNull(topic);
 
         List<Message> messages = pull(topic, 1);
         if (messages.isEmpty()) {
-            return Optional.empty();
+            return null;
         }
 
-        return Optional.of(messages.get(0));
+        return messages.get(0);
     }
 
     public List<Message> pull(String topic, int batchSize) {
