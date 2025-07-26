@@ -1,6 +1,6 @@
 package github.luckygc.pgq;
 
-import github.luckygc.pgq.api.MessageProcessor;
+import github.luckygc.pgq.api.MessageListener;
 import github.luckygc.pgq.api.PgqManager;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -86,12 +86,12 @@ public class PgqListener {
     }
 
     private void handleChannelPayload(String payload) {
-        MessageProcessor messageProcessor = pgqManager.getMessageProcessor(payload);
-        if (messageProcessor == null) {
+        MessageListener messageListener = pgqManager.getMessageProcessor(payload);
+        if (messageListener == null) {
             return;
         }
 
-        messageProcessor.onMessageAvailable();
+        messageListener.onMessageAvailable();
     }
 
     /**

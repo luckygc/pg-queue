@@ -2,7 +2,7 @@ package github.luckygc.pgq.support;
 
 import github.luckygc.pgq.Message;
 import github.luckygc.pgq.api.MessageHandler;
-import github.luckygc.pgq.api.MessageProcessor;
+import github.luckygc.pgq.api.MessageListener;
 import github.luckygc.pgq.api.MultiMessageHandler;
 import github.luckygc.pgq.api.PgQueue;
 import github.luckygc.pgq.api.SingleMessageHandler;
@@ -12,9 +12,9 @@ import java.util.concurrent.Semaphore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MessageProcessorImpl implements MessageProcessor {
+public class MessageListenerImpl implements MessageListener {
 
-    private static final Logger log = LoggerFactory.getLogger(MessageProcessorImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(MessageListenerImpl.class);
     private final Semaphore semaphore;
     private final PgQueue pgQueue;
     private final int pullCount;
@@ -22,7 +22,7 @@ public class MessageProcessorImpl implements MessageProcessor {
     private MultiMessageHandler multiMessageHandler;
     private final boolean isHandleSingle;
 
-    public MessageProcessorImpl(PgQueue pgQueue, MessageHandler messageHandler, int pullCount, int threadCount) {
+    public MessageListenerImpl(PgQueue pgQueue, MessageHandler messageHandler, int pullCount, int threadCount) {
         this.pgQueue = Objects.requireNonNull(pgQueue);
         if (messageHandler instanceof SingleMessageHandler handler) {
             singleMessageHandler = handler;
@@ -94,7 +94,6 @@ public class MessageProcessorImpl implements MessageProcessor {
                 singleMessageHandler.handle(message);
             } catch (Throwable t) {
                 log.error("处理消息失败", t);
-                pgQueue.dead(message);
             }
         }
     }

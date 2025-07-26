@@ -5,6 +5,9 @@ import java.time.Duration;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * 管理正在处理中的消息
+ */
 public interface ProcessingMessageManager {
 
     void complete(Message message);

@@ -1,6 +1,6 @@
 package github.luckygc.pgq.api;
 
-public interface MessageProcessor {
+public interface MessageListener {
 
     String topic();
 

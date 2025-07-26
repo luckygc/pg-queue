@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,9 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class QueueDao {
 
     private static final Logger log = LoggerFactory.getLogger(QueueDao.class);
-    private static final int PGQ_ID = 199738;
-    private static final int SCHEDULER_ID = 1;
-    private static final String CHANNEL_NAME = "pgq_topic_channel";
+
 
     private static final String INSERT_INTO_PENDING = """
             insert into pgq_pending_queue
@@ -51,7 +50,7 @@ public class QueueDao {
                 returning id, create_time, topic, priority, payload, attempt
             ) insert into pgq_processing_queue
                           (id, create_time, topic, priority, payload, attempt, timeout_time)
-                    select id, create_time, topic, priority, payload, attempt + 1, now() + interval '10 minutes'
+                    select id, create_time, topic, priority, payload, attempt + 1, ?
                     from message_to_process
             """;
 
@@ -120,7 +119,7 @@ public class QueueDao {
                 returning id, create_time, topic, priority, payload, attempt
             ) insert into pgq_dead_queue
                   (id, create_time, topic, priority, payload, attempt, dead_time)
-            select id, create_time, topic, priority, payload, attempt, now() from message_to_dead
+            select id, create_time, topic, priority, payload, attempt, ? from message_to_dead
             """;
 
     private static final String MOVE_PROCESSING_MESSAGE_TO_INVISIBLE = """
@@ -152,10 +151,6 @@ public class QueueDao {
     public QueueDao(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
         this.jdbcTemplate = jdbcTemplate;
         this.txTemplate = transactionTemplate;
-    }
-
-    public void insertMessage(Message message) {
-        insertMessage(message, null);
     }
 
     public void insertMessage(Message message, @Nullable Duration processDelay) {
@@ -202,7 +197,7 @@ public class QueueDao {
         try {
             txTemplate.executeWithoutResult(ignore -> {
                 // 尝试获取锁
-                boolean locked = tryLockInTx(SCHEDULER_ID);
+                boolean locked = tryLockInTx(PgqConstants.SCHEDULER_ID);
                 if (!locked) {
                     return;
                 }
@@ -214,7 +209,7 @@ public class QueueDao {
                 jdbcTemplate.update(MOVE_TIMEOUT_MESSAGES_TO_PENDING);
 
                 // 查询有可处理消息的topic并发出通知
-                jdbcTemplate.update(NOTIFY_AVAILABLE_TOPIC, CHANNEL_NAME);
+                jdbcTemplate.update(NOTIFY_AVAILABLE_TOPIC, PgqConstants.CHANNEL_NAME);
             });
         } catch (Throwable t) {
             log.error("调度失败", t);
@@ -230,13 +225,13 @@ public class QueueDao {
         }
 
         String sql = "SELECT pg_try_advisory_xact_lock(?, ?) AS locked";
-        Boolean locked = jdbcTemplate.queryForObject(sql, boolMapper, PGQ_ID, objId);
+        Boolean locked = jdbcTemplate.queryForObject(sql, boolMapper, PgqConstants.PGQ_ID, objId);
         return Boolean.TRUE.equals(locked);
     }
 
     @Nullable
-    public Message pull(String topic) {
-        List<Message> messages = pull(topic, 1);
+    public Message pull(String topic, Duration processTimeout) {
+        List<Message> messages = pull(topic, 1, processTimeout);
         if (messages.isEmpty()) {
             return null;
         }
@@ -244,8 +239,9 @@ public class QueueDao {
         return messages.get(0);
     }
 
-    public List<Message> pull(String topic, int batchSize) {
+    public List<Message> pull(String topic, int batchSize, Duration processTimeout) {
         Objects.requireNonNull(topic);
+        checkDurationIsPositive(processTimeout);
 
         return txTemplate.execute(ignore -> {
             List<Message> messages = jdbcTemplate.query(
@@ -368,7 +364,7 @@ public class QueueDao {
     private record InsertPsSetter(Message message, Duration processDelay) implements PreparedStatementSetter {
 
         @Override
-        public void setValues(PreparedStatement ps) throws SQLException {
+        public void setValues(@NonNull PreparedStatement ps) throws SQLException {
             if (processDelay == null) {
                 insertPsSetter(ps, message);
                 return;
@@ -382,7 +378,7 @@ public class QueueDao {
             BatchPreparedStatementSetter {
 
         @Override
-        public void setValues(PreparedStatement ps, int i) throws SQLException {
+        public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
             Message message = messages.get(i);
             if (processDelay == null) {
                 insertPsSetter(ps, message);

@@ -9,10 +9,10 @@ public interface PgqManager {
     @Nullable
     PgQueue getQueue(String topic);
 
-    void registerMessageProcessor(String topic, MessageProcessor messageProcessor);
+    void registerMessageProcessor(String topic, MessageListener messageListener);
 
     @Nullable
-    MessageProcessor getMessageProcessor(String topic);
+    MessageListener getMessageProcessor(String topic);
 
     ProcessingMessageManager messageManager();
 }
