@@ -13,10 +13,11 @@ public class PgQueueImpl implements PgQueue {
     private final QueueDao queueDao;
     private final String topic;
     private final ProcessingMessageManager processingMessageManager;
+    @Nullable
     private final MessageListener messageListener;
 
     public PgQueueImpl(QueueDao queueDao, String topic, ProcessingMessageManager processingMessageManager,
-            MessageListener messageListener) {
+            @Nullable MessageListener messageListener) {
         this.queueDao = Objects.requireNonNull(queueDao);
         this.topic = Objects.requireNonNull(topic);
         this.processingMessageManager = Objects.requireNonNull(processingMessageManager);
@@ -33,6 +34,7 @@ public class PgQueueImpl implements PgQueue {
         return processingMessageManager;
     }
 
+    @Nullable
     @Override
     public MessageListener messageListener() {
         return messageListener;
