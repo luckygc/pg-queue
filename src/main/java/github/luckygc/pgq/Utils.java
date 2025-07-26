@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 public class Utils {
 
@@ -42,7 +43,7 @@ public class Utils {
         return messagesObjs;
     }
 
-    public static void checkMessagesNotEmpty(List<?> messages) {
+    public static void checkMessagesNotEmpty(@Nullable List<?> messages) {
         if (messages == null || messages.isEmpty()) {
             throw new IllegalArgumentException("messages不能为空");
         }
