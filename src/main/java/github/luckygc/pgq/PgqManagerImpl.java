@@ -3,7 +3,7 @@ package github.luckygc.pgq;
 import github.luckygc.pgq.api.BatchMessageHandler;
 import github.luckygc.pgq.api.QueueListener;
 import github.luckygc.pgq.api.PgqManager;
-import github.luckygc.pgq.api.ProcessingMessageManager;
+import github.luckygc.pgq.api.MessageManager;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import java.sql.Connection;
@@ -45,7 +45,7 @@ public class PgqManagerImpl implements PgqManager {
     private volatile @Nullable PgConnection con;
 
     private final QueueDao queueDao;
-    private final ProcessingMessageManager processingMessageManager;
+    private final MessageManager messageManager;
 
     public PgqManagerImpl(String jdbcUrl, String username, String password, JdbcTemplate jdbcTemplate,
             TransactionTemplate transactionTemplate) {
@@ -53,7 +53,7 @@ public class PgqManagerImpl implements PgqManager {
         this.username = username;
         this.password = password;
         this.queueDao = new QueueDao(jdbcTemplate, transactionTemplate);
-        this.processingMessageManager = new ProcessingMessageManagerImpl(queueDao);
+        this.messageManager = new MessageManagerImpl(queueDao);
     }
 
     @Override
@@ -96,7 +96,7 @@ public class PgqManagerImpl implements PgqManager {
             }
 
             PgQueueImpl pgQueue = new PgQueueImpl(queueDao, k);
-            QueueListener messageListener = new SingleMessageProcessor(processingMessageManager, messageHandler);
+            QueueListener messageListener = new SingleMessageProcessor(messageManager, messageHandler);
             return new QueueManagerImpl(pgQueue, messageListener);
         });
     }
@@ -123,8 +123,8 @@ public class PgqManagerImpl implements PgqManager {
     }
 
     @Override
-    public ProcessingMessageManager processingMessageManager() {
-        return processingMessageManager;
+    public MessageManager processingMessageManager() {
+        return messageManager;
     }
 
     @Override

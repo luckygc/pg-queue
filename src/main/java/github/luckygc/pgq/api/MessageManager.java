@@ -5,9 +5,9 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * 管理正在处理中的消息
+ * 管理拉取到的消息
  */
-public interface ProcessingMessageManager {
+public interface MessageManager {
 
     void complete(Message message);
 

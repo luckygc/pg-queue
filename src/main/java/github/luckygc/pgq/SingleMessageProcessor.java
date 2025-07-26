@@ -2,7 +2,7 @@ package github.luckygc.pgq;
 
 import github.luckygc.pgq.api.QueueListener;
 import github.luckygc.pgq.api.PgQueue;
-import github.luckygc.pgq.api.ProcessingMessageManager;
+import github.luckygc.pgq.api.MessageManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import java.util.List;
 import java.util.Objects;
@@ -14,10 +14,10 @@ public class SingleMessageProcessor implements QueueListener {
 
     private static final Logger log = LoggerFactory.getLogger(SingleMessageProcessor.class);
     private final Semaphore semaphore;
-    private final ProcessingMessageManager messageManager;
+    private final MessageManager messageManager;
     private final SingleMessageHandler messageHandler;
 
-    public SingleMessageProcessor(ProcessingMessageManager messageManager, SingleMessageHandler messageHandler) {
+    public SingleMessageProcessor(MessageManager messageManager, SingleMessageHandler messageHandler) {
         this.messageManager = Objects.requireNonNull(messageManager);
         this.messageHandler = Objects.requireNonNull(messageHandler);
 

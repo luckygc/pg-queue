@@ -3,7 +3,7 @@ package github.luckygc.pgq.example;
 import github.luckygc.pgq.Message;
 import github.luckygc.pgq.PgqManagerImpl;
 import github.luckygc.pgq.api.PgqManager;
-import github.luckygc.pgq.api.ProcessingMessageManager;
+import github.luckygc.pgq.api.MessageManager;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import java.time.Duration;
@@ -36,7 +36,7 @@ public class DemoMessageConfig {
             }
 
             @Override
-            public void handle(ProcessingMessageManager messageManager, Message message) {
+            public void handle(MessageManager messageManager, Message message) {
                 if (message.getPayload() == null) {
                     messageManager.delete(message);
                     return;

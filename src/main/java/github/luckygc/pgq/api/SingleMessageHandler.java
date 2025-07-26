@@ -14,5 +14,5 @@ public interface SingleMessageHandler {
         return PgqConstants.MESSAGE_HANDLER_THREAD_COUNT;
     }
 
-    void handle(ProcessingMessageManager messageManager, Message message);
+    void handle(MessageManager messageManager, Message message);
 }

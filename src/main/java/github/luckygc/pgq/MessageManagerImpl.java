@@ -1,14 +1,14 @@
 package github.luckygc.pgq;
 
-import github.luckygc.pgq.api.ProcessingMessageManager;
+import github.luckygc.pgq.api.MessageManager;
 import java.time.Duration;
 import java.util.List;
 
-public class ProcessingMessageManagerImpl implements ProcessingMessageManager {
+public class MessageManagerImpl implements MessageManager {
 
     private final QueueDao queueDao;
 
-    public ProcessingMessageManagerImpl(QueueDao queueDao) {
+    public MessageManagerImpl(QueueDao queueDao) {
         this.queueDao = queueDao;
     }
 
