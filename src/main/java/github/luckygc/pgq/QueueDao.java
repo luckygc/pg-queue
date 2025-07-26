@@ -22,28 +22,22 @@ public class QueueDao {
 
     private static final Logger log = LoggerFactory.getLogger(QueueDao.class);
 
+    // 插入
     private static final String INSERT_INTO_PENDING = """
             insert into pgq_pending_queue
                 (create_time, topic, priority, payload, attempt)
                 values(?, ?, ?, ?, ?)
             """;
-
     private static final String INSERT_INTO_INVISIBLE = """
             insert into pgq_invisible_queue
                 (create_time, topic, priority, payload, attempt, visible_time)
                 values(?, ?, ?, ?, ?, ?)
             """;
 
-    private static final String FIND_PENDING_MESSAGES_SKIP_LOCKED = """
-             select id, create_time, topic, priority, payload, attempt + 1
-                    from pgq_pending_queue
-                    where topic = ?
-                    order by priority desc ,id
-                    limit ?
-                    for update skip locked
-            """;
-
-    private static final String MOVE_PENDING_MESSAGES_TO_PROCESSING = """
+    /**
+     * 移动待处理消息到处理中队列
+     */
+    private static final String BATCH_MOVE_PENDING_MESSAGES_TO_PROCESSING = """
             with message_to_process as (
                 delete from pgq_pending_queue where id = any(?::bigint[])
                 returning id, create_time, topic, priority, payload, attempt
@@ -53,6 +47,23 @@ public class QueueDao {
                     from message_to_process
             """;
 
+    // schedule
+    private static final String FIND_PENDING_MESSAGES_SKIP_LOCKED = """
+             select id, create_time, topic, priority, payload, attempt + 1
+                    from pgq_pending_queue
+                    where topic = ?
+                    order by priority desc ,id
+                    limit ?
+                    for update skip locked
+            """;
+    private static final String MOVE_TIMEOUT_MESSAGES_TO_PENDING = """
+            with message_to_pending as (
+                delete from pgq_processing_queue where timeout_time <= now()
+                returning id, create_time, topic, priority, payload, attempt
+            ) insert into pgq_pending_queue
+                      (id, create_time, topic, priority, payload, attempt)
+                select id, create_time, topic, priority, payload, attempt from message_to_pending
+            """;
     private static final String MOVE_VISIBLE_MESSAGES_TO_PENDING = """
             with message_to_pending as (
                 delete from pgq_invisible_queue where visible_time <= now()
@@ -61,20 +72,10 @@ public class QueueDao {
                       (id, create_time, topic, priority, payload, attempt)
                 select id, create_time, topic, priority, payload, attempt from message_to_pending
             """;
-
     private static final String NOTIFY_AVAILABLE_TOPIC = """
             with topic_to_notify as (
                 select distinct topic from pgq_pending_queue
             ) select pg_notify(?, topic) from topic_to_notify
-            """;
-
-    private static final String MOVE_TIMEOUT_MESSAGES_TO_PENDING = """
-            with message_to_pending as (
-                delete from pgq_processing_queue where timeout_time <= now()
-                returning id, create_time, topic, priority, payload, attempt
-            ) insert into pgq_pending_queue
-                      (id, create_time, topic, priority, payload, attempt)
-                select id, create_time, topic, priority, payload, attempt from message_to_pending
             """;
 
     private static final String MOVE_PROCESSING_MESSAGE_TO_COMPLETE = """
@@ -85,12 +86,7 @@ public class QueueDao {
                   (id, create_time, topic, priority, payload, attempt, complete_time)
             select id, create_time, topic, priority, payload, attempt, now() from message_to_complete
             """;
-
-    private static final String DELETE_PROCESSING_MESSAGE = """
-            delete from pgq_processing_queue where id = ?
-            """;
-
-    private static final String MOVE_PROCESSING_MESSAGES_TO_COMPLETE = """
+    private static final String BATCH_MOVE_PROCESSING_MESSAGES_TO_COMPLETE = """
             with message_to_complete as (
                 delete from pgq_processing_queue where id = any(?::bigint[])
                 returning id, create_time, topic, priority, payload, attempt
@@ -99,10 +95,15 @@ public class QueueDao {
             select id, create_time, topic, priority, payload, attempt, now() from message_to_complete
             """;
 
-    private static final String DELETE_PROCESSING_MESSAGES = """
+    // 删除处理中消息
+    private static final String DELETE_PROCESSING_MESSAGE = """
+            delete from pgq_processing_queue where id = ?
+            """;
+    private static final String BATCH_DELETE_PROCESSING_MESSAGES = """
             delete from pgq_processing_queue where id = any(?::bigint[])
             """;
 
+    // 移动处理中消息到死信队列
     private static final String MOVE_PROCESSING_MESSAGE_TO_DEAD = """
             with message_to_dead as (
                 delete from pgq_processing_queue where id = ?
@@ -111,8 +112,7 @@ public class QueueDao {
                   (id, create_time, topic, priority, payload, attempt, dead_time)
             select id, create_time, topic, priority, payload, attempt, now() from message_to_dead
             """;
-
-    private static final String MOVE_PROCESSING_MESSAGES_TO_DEAD = """
+    private static final String BATCH_MOVE_PROCESSING_MESSAGES_TO_DEAD = """
             with message_to_dead as (
                 delete from pgq_processing_queue where id = any(?::bigint[])
                 returning id, create_time, topic, priority, payload, attempt
@@ -121,6 +121,7 @@ public class QueueDao {
             select id, create_time, topic, priority, payload, attempt, ? from message_to_dead
             """;
 
+    // 移动处理中消息到不可见队列等待重试
     private static final String MOVE_PROCESSING_MESSAGE_TO_INVISIBLE = """
             with message_to_retry as (
                 delete from pgq_processing_queue where id = ?
@@ -130,8 +131,7 @@ public class QueueDao {
                   (id, create_time, topic, priority, payload, attempt, visible_time)
             select id, create_time, topic, priority, payload, attempt, ? from message_to_retry
             """;
-
-    private static final String MOVE_PROCESSING_MESSAGES_TO_INVISIBLE = """
+    private static final String BATCH_MOVE_PROCESSING_MESSAGES_TO_INVISIBLE = """
             with message_to_retry as (
                 delete from pgq_processing_queue where id = any(?::bigint[])
                 returning id, create_time, topic, priority, payload, attempt
@@ -203,7 +203,7 @@ public class QueueDao {
         try {
             txTemplate.executeWithoutResult(ignore -> {
                 // 尝试获取锁
-                boolean locked = tryLockInTx(PgqConstants.SCHEDULER_ID);
+                boolean locked = tryLockSchedulerInTx();
                 if (!locked) {
                     return;
                 }
@@ -225,13 +225,13 @@ public class QueueDao {
     /**
      * 尝试获取事务级咨询锁
      */
-    private boolean tryLockInTx(int objId) {
+    private boolean tryLockSchedulerInTx() {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalArgumentException("当前事务未激活");
         }
 
         String sql = "SELECT pg_try_advisory_xact_lock(?, ?) AS locked";
-        Boolean locked = jdbcTemplate.queryForObject(sql, boolMapper, PgqConstants.PGQ_ID, objId);
+        Boolean locked = jdbcTemplate.queryForObject(sql, boolMapper, PgqConstants.PGQ_ID, PgqConstants.SCHEDULER_ID);
         return Boolean.TRUE.equals(locked);
     }
 
@@ -261,7 +261,7 @@ public class QueueDao {
             }
 
             Long[] idArray = getIdArray(messages);
-            jdbcTemplate.update(MOVE_PENDING_MESSAGES_TO_PROCESSING, new Object[]{idArray});
+            jdbcTemplate.update(BATCH_MOVE_PENDING_MESSAGES_TO_PROCESSING, new Object[]{idArray});
             return messages;
         });
     }
@@ -282,9 +282,9 @@ public class QueueDao {
         Long[] idArray = getIdArray(messages);
 
         if (delete) {
-            jdbcTemplate.update(DELETE_PROCESSING_MESSAGES, new Object[]{idArray});
+            jdbcTemplate.update(BATCH_DELETE_PROCESSING_MESSAGES, new Object[]{idArray});
         } else {
-            jdbcTemplate.update(MOVE_PROCESSING_MESSAGES_TO_COMPLETE, new Object[]{idArray});
+            jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_COMPLETE, new Object[]{idArray});
         }
     }
 
@@ -292,7 +292,7 @@ public class QueueDao {
         Utils.checkNotEmpty(messages);
 
         Long[] idArray = getIdArray(messages);
-        jdbcTemplate.update(DELETE_PROCESSING_MESSAGES, new Object[]{idArray});
+        jdbcTemplate.update(BATCH_DELETE_PROCESSING_MESSAGES, new Object[]{idArray});
     }
 
     public void deadMessage(Message message) {
@@ -305,7 +305,7 @@ public class QueueDao {
         Utils.checkNotEmpty(messages);
 
         Long[] idArray = getIdArray(messages);
-        jdbcTemplate.update(MOVE_PROCESSING_MESSAGES_TO_DEAD, new Object[]{idArray});
+        jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_DEAD, new Object[]{idArray});
     }
 
     private Long[] getIdArray(List<Message> messages) {
@@ -344,7 +344,7 @@ public class QueueDao {
         }
 
         Long[] idArray = getIdArray(messages);
-        jdbcTemplate.update(MOVE_PROCESSING_MESSAGES_TO_INVISIBLE, idArray, nextVisibleTime);
+        jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_INVISIBLE, idArray, nextVisibleTime);
     }
 
     private static void insertPsSetter(PreparedStatement ps, Message message)
