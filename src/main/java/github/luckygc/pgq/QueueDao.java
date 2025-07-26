@@ -317,18 +317,4 @@ public class QueueDao {
 
         return ids;
     }
-
-    private PreparedStatement createPsAndSetIdArray(Connection con, String sql, List<Message> messages)
-            throws SQLException {
-        PreparedStatement ps = con.prepareStatement(sql);
-        Long[] ids = new Long[messages.size()];
-        int i = 0;
-        for (Message message : messages) {
-            ids[i++] = message.getId();
-        }
-
-        ps.setArray(1, con.createArrayOf("bigint", ids));
-
-        return ps;
-    }
 }
