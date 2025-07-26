@@ -9,20 +9,19 @@ import github.luckygc.pgq.api.SingleMessageHandler;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MessageListenerImpl implements MessageListener {
+public class PullSingleHandleSingleMessageProcessor implements MessageListener {
 
-    private static final Logger log = LoggerFactory.getLogger(MessageListenerImpl.class);
-    private final Semaphore semaphore;
+    private static final Logger log = LoggerFactory.getLogger(PullSingleHandleSingleMessageProcessor.class);
+    private final AtomicBoolean runningFlag = new AtomicBoolean(false);
     private final PgQueue pgQueue;
-    private final int pullCount;
-    private SingleMessageHandler singleMessageHandler;
-    private MultiMessageHandler multiMessageHandler;
     private final boolean isHandleSingle;
 
-    public MessageListenerImpl(PgQueue pgQueue, MessageHandler messageHandler, int pullCount, int threadCount) {
+    public PullSingleHandleSingleMessageProcessor(PgQueue pgQueue, MessageHandler messageHandler, int pullCount,
+            int threadCount) {
         this.pgQueue = Objects.requireNonNull(pgQueue);
         if (messageHandler instanceof SingleMessageHandler handler) {
             singleMessageHandler = handler;
@@ -58,7 +57,7 @@ public class MessageListenerImpl implements MessageListener {
 
     @Override
     public void onMessageAvailable() {
-        if (!semaphore.tryAcquire()) {
+        if (!runningFlag.compareAndSet(false, true)) {
             return;
         }
 
@@ -78,7 +77,6 @@ public class MessageListenerImpl implements MessageListener {
         }
     }
 
-    @Override
     public void processMessages() {
         if (pullCount == 1) {
             pullOneAndHandle();

@@ -4,7 +4,8 @@ public interface MessageListener {
 
     String topic();
 
+    /**
+     * 不允许阻塞
+     */
     void onMessageAvailable();
-
-    void processMessages();
 }
