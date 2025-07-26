@@ -1,8 +1,6 @@
 package github.luckygc.pgq;
 
-import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -12,8 +10,12 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.transaction.support.TransactionTemplate;
 
 public class QueueDao {
+
+    private static final long PGQ_ID = 199738;
+    private static final long SCHEDULER_ID = 1;
 
     private static final String NEW_INSERT_INTO_PENDING = """
             insert into pgq_pending_queue
@@ -52,10 +54,14 @@ public class QueueDao {
         return message;
     };
 
-    private final JdbcTemplate jdbcTemplate;
+    private static final RowMapper<Boolean> boolMapper = (rs, ignore) -> rs.getBoolean(1);
 
-    public QueueDao(JdbcTemplate jdbcTemplate) {
+    private final JdbcTemplate jdbcTemplate;
+    private final TransactionTemplate txTemplate;
+
+    public QueueDao(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
         this.jdbcTemplate = jdbcTemplate;
+        this.txTemplate = transactionTemplate;
     }
 
     public void insertMessage(Message message) {
@@ -72,7 +78,7 @@ public class QueueDao {
     private PreparedStatementCreator insertPsCreator(Message message, Duration processDelay) {
         return con -> {
             String sql = NEW_INSERT_INTO_PENDING;
-            boolean isProcessLater = processDelay != null && !processDelay.isZero();
+            boolean isProcessLater = isProcessLater(processDelay);
             if (isProcessLater) {
                 sql = NEW_INSERT_INTO_INVISIBLE;
             }
@@ -118,10 +124,14 @@ public class QueueDao {
         }
     }
 
+    private boolean isProcessLater(@Nullable Duration processDelay) {
+        return processDelay != null && !processDelay.isZero();
+    }
+
     private PreparedStatementCreator batchInsertPsCreator(List<Message> messages, @Nullable Duration processDelay) {
         return con -> {
             String sql = NEW_BATCH_INSERT_INTO_PENDING;
-            boolean isProcessLater = processDelay != null && !processDelay.isZero();
+            boolean isProcessLater = isProcessLater(processDelay);
             if (isProcessLater) {
                 sql = NEW_BATCH_INSERT_INTO_INVISIBLE;
             }
@@ -162,7 +172,7 @@ public class QueueDao {
     }
 
     /**
-     * 批量把到时间的不可见消息移入待处理队列
+     * 批量把到时间的不可见消息移入待处理队列,把处理超时任务重新移回待处理队列,并发送通知提醒有可用消息
      */
     public void schedule() {
         String sql = """
@@ -180,7 +190,14 @@ public class QueueDao {
                 ) select pg_notify('__pgq_queue__', topic) from pgq_pending_queue
                        where (select locked from lock_result) group by topic
                 """;
+
         jdbcTemplate.update(sql, LocalDateTime.now());
+    }
+
+    public boolean tryLockInTx(long objId) {
+        String sql = "SELECT pg_try_advisory_xact_lock($1, $2) AS locked";
+        Boolean locked = jdbcTemplate.queryForObject(sql, boolMapper, PGQ_ID, objId);
+        return Boolean.TRUE.equals(locked);
     }
 
     @Nullable
@@ -212,9 +229,9 @@ public class QueueDao {
                 ), insert_op as (
                     insert into pgq_processing_queue
                           (id, create_time, topic, priority, payload, attempt, process_time)
-                    select id, create_time, topic, priority, payload, attempt, now() from message_to_process
+                    select id, create_time, topic, priority, payload, attempt + 1, now() from message_to_process
                 ) delete from pgq_pending_queue where id in (select w.id from message_to_process w)
-                returning id, create_time, topic, priority, payload, attempt
+                returning id, create_time, topic, priority, payload, attempt + 1
                 """;
         return jdbcTemplate.query(sql, messageMapper, topic, batchSize);
     }
@@ -316,5 +333,26 @@ public class QueueDao {
         }
 
         return ids;
+    }
+
+    public void retryMessage(Message message, @Nullable Duration processDelay) {
+        Objects.requireNonNull(message);
+
+        checkProcessDelay(processDelay);
+        boolean isProcessLater = isProcessLater(processDelay);
+        if (isProcessLater) {
+            String sql = """
+                    with message_to_retry as (
+                        delete from pgq_processing_queue where id = $1
+                        returning id, create_time, topic, priority, payload, attempt
+                    )
+                    insert into pgq_dead_queue
+                    (id, create_time, topic, priority, payload, attempt, dead_time)
+                    select
+                     id, create_time, topic, priority, payload, attempt, now() from message_to_retry
+                    """;
+            jdbcTemplate.update(sql);
+        }
+
     }
 }
