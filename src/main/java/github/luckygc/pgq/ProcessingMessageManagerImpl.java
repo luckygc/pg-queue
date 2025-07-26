@@ -44,7 +44,7 @@ public class ProcessingMessageManagerImpl implements ProcessingMessageManager {
 
     @Override
     public void retry(Message message) {
-        queueDao.retryProcessingMessage(message, null);
+        queueDao.retryProcessingMessage(message);
     }
 
     @Override
@@ -54,7 +54,7 @@ public class ProcessingMessageManagerImpl implements ProcessingMessageManager {
 
     @Override
     public void retry(List<Message> messages) {
-        queueDao.retryProcessingMessages(messages, null);
+        queueDao.retryProcessingMessages(messages);
     }
 
     @Override
