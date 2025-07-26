@@ -16,7 +16,9 @@ public interface PgqManager {
     @Nullable
     QueueManager getQueueManager(String topic);
 
-    MessageManager processingMessageManager();
+    MessageManager messageManager();
+
+    DeadMessageManger deadMessageManager();
 
     void startListen() throws SQLException;
 

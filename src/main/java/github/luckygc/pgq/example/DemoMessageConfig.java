@@ -1,11 +1,11 @@
 package github.luckygc.pgq.example;
 
 import github.luckygc.pgq.Message;
-import github.luckygc.pgq.PgqManagerImpl;
-import github.luckygc.pgq.api.PgqManager;
 import github.luckygc.pgq.api.MessageManager;
+import github.luckygc.pgq.api.PgqManager;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
+import github.luckygc.pgq.impl.PgqManagerImpl;
 import java.time.Duration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -26,7 +26,6 @@ public class DemoMessageConfig {
         testQueueManager.queue().push("""
                 {"name" : "xxx"}""");
         testQueueManager.queue();
-
 
         QueueManager testQueue2 = pgqManager.register("test2", new SingleMessageHandler() {
 

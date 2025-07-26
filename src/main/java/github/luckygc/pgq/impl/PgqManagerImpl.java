@@ -1,9 +1,12 @@
-package github.luckygc.pgq;
+package github.luckygc.pgq.impl;
 
+import github.luckygc.pgq.PgqConstants;
+import github.luckygc.pgq.QueueDao;
 import github.luckygc.pgq.api.BatchMessageHandler;
-import github.luckygc.pgq.api.QueueListener;
-import github.luckygc.pgq.api.PgqManager;
+import github.luckygc.pgq.api.DeadMessageManger;
 import github.luckygc.pgq.api.MessageManager;
+import github.luckygc.pgq.api.PgqManager;
+import github.luckygc.pgq.api.QueueListener;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import java.sql.Connection;
@@ -112,7 +115,7 @@ public class PgqManagerImpl implements PgqManager {
             }
 
             PgQueueImpl pgQueue = new PgQueueImpl(queueDao, k);
-            QueueListener messageListener = new BatchMessageProcessor(messageHandler);
+            QueueListener messageListener = new BatchMessageQueueListener(messageHandler);
             return new QueueManagerImpl(pgQueue, messageListener);
         });
     }
@@ -123,8 +126,13 @@ public class PgqManagerImpl implements PgqManager {
     }
 
     @Override
-    public MessageManager processingMessageManager() {
+    public MessageManager messageManager() {
         return messageManager;
+    }
+
+    @Override
+    public DeadMessageManger deadMessageManager() {
+        return null;
     }
 
     @Override

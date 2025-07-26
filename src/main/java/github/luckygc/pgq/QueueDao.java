@@ -161,17 +161,6 @@ public class QueueDao {
             select id, create_time, topic, priority, payload, attempt from message_to_retry
             """;
 
-    private static final RowMapper<Message> messageMapper = (rs, ignore) -> {
-        Message message = new Message();
-        message.setId(rs.getLong(1));
-        message.setCreateTime(rs.getTimestamp(2).toLocalDateTime());
-        message.setTopic(rs.getString(3));
-        message.setPriority(rs.getInt(4));
-        message.setPayload(rs.getString(5));
-        message.setAttempt(rs.getInt(6));
-        return message;
-    };
-
     private static final RowMapper<Boolean> boolMapper = (rs, ignore) -> rs.getBoolean(1);
 
     private final JdbcTemplate jdbcTemplate;
@@ -252,7 +241,7 @@ public class QueueDao {
         List<Message> messageObjs = txTemplate.execute(ignore -> {
             List<Message> messages = jdbcTemplate.query(
                     FIND_PENDING_MESSAGES_SKIP_LOCKED,
-                    messageMapper,
+                    Message.rowMapper,
                     topic,
                     pullCount);
 

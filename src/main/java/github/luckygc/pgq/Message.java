@@ -2,8 +2,20 @@ package github.luckygc.pgq;
 
 import java.time.LocalDateTime;
 import org.jspecify.annotations.Nullable;
+import org.springframework.jdbc.core.RowMapper;
 
 public class Message {
+
+    public static final RowMapper<Message> rowMapper = (rs, ignore) -> {
+        Message message = new Message();
+        message.setId(rs.getLong(1));
+        message.setCreateTime(rs.getTimestamp(2).toLocalDateTime());
+        message.setTopic(rs.getString(3));
+        message.setPriority(rs.getInt(4));
+        message.setPayload(rs.getString(5));
+        message.setAttempt(rs.getInt(6));
+        return message;
+    };
 
     @Nullable
     private Long id;
