@@ -40,9 +40,7 @@ public class PgqManagerImpl implements PgqManager {
     private final String username;
     private final String password;
     private final AtomicBoolean listeningFlag = new AtomicBoolean(false);
-
-    @Nullable
-    private volatile PgConnection con = null;
+    private volatile @Nullable PgConnection con;
 
     private final QueueDao queueDao;
     private final ProcessingMessageManager processingMessageManager;

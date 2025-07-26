@@ -313,7 +313,7 @@ public class QueueDao {
         Long[] ids = new Long[messages.size()];
         int i = 0;
         for (Message message : messages) {
-            ids[i++] = message.getId();
+            ids[i++] = Objects.requireNonNull(message.getId());
         }
 
         return ids;
@@ -324,13 +324,13 @@ public class QueueDao {
         insertPsSetter(ps, message, null);
     }
 
-    private static void insertPsSetter(PreparedStatement ps, Message message, LocalDateTime visibleTime)
+    private static void insertPsSetter(PreparedStatement ps, Message message, @Nullable LocalDateTime visibleTime)
             throws SQLException {
-        ps.setTimestamp(1, Timestamp.valueOf(message.getCreateTime()));
+        ps.setTimestamp(1, Timestamp.valueOf(Objects.requireNonNull(message.getCreateTime())));
         ps.setString(2, message.getTopic());
-        ps.setInt(3, message.getPriority());
+        ps.setInt(3, Objects.requireNonNull(message.getPriority()));
         ps.setString(4, message.getPayload());
-        ps.setInt(5, message.getAttempt());
+        ps.setInt(5, Objects.requireNonNull(message.getAttempt()));
         if (visibleTime != null) {
             ps.setTimestamp(6, Timestamp.valueOf(visibleTime));
         }
@@ -345,7 +345,7 @@ public class QueueDao {
                 return;
             }
 
-            insertPsSetter(ps, message, message.getCreateTime().plus(processDelay));
+            insertPsSetter(ps, message, Objects.requireNonNull(message.getCreateTime()).plus(processDelay));
         }
     }
 
@@ -360,7 +360,7 @@ public class QueueDao {
                 return;
             }
 
-            insertPsSetter(ps, message, message.getCreateTime().plus(processDelay));
+            insertPsSetter(ps, message, Objects.requireNonNull(message.getCreateTime()).plus(processDelay));
         }
 
         @Override
