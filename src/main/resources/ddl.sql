@@ -42,10 +42,10 @@ create table pgq_processing_queue
     priority     int                      not null default 0,
     payload      varchar collate "C"      not null,
     attempt      int                      not null,
-    process_time timestamp                not null default now()
+    timeout_time timestamp                not null
 );
 
-create index idx_pgq_processing_queue_process_time on pgq_processing_queue using btree (process_time);
+create index idx_pgq_processing_queue_timeout_time on pgq_processing_queue using btree (timeout_time);
 
 drop table if exists pgq_complete_queue;
 create table pgq_complete_queue
