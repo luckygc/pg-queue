@@ -15,8 +15,8 @@ public class PgqConstants {
     public static final Duration PROCESS_TIMEOUT = Duration.ofMinutes(10);
 
     /*--------------------------------sql start----------------------------------*/
-    private static final int PGQ_ID = 199738;
-    private static final int SCHEDULER_ID = 1;
-    private static final String CHANNEL_NAME = "pgq_topic_channel";
+    public static final int PGQ_ID = 199738;
+    public static final int SCHEDULER_ID = 1;
+    public static final String CHANNEL_NAME = "pgq_topic_channel";
     /*--------------------------------sql end------------------------------------*/
 }
