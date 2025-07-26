@@ -22,7 +22,11 @@ public interface ProcessingMessageManager {
 
     void delete(List<Message> messages);
 
+    void retry(Message message);
+
     void retry(Message message, @Nullable Duration processDelay);
+
+    void retry(List<Message> messages);
 
     void retry(List<Message> messages, @Nullable Duration processDelay);
 }
