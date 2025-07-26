@@ -7,7 +7,9 @@ public interface PgqManager {
 
     PgQueue registerQueue(String topic);
 
-    PgQueue registerQueue(String topic, MessageListener messageListener);
+    PgQueue registerQueue(String topic, SingleMessageHandler messageHandler);
+
+    PgQueue registerQueue(String topic, BatchMessageHandler messageHandler);
 
     @Nullable
     PgQueue getQueue(String topic);
