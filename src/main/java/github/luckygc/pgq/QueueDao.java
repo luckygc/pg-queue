@@ -15,7 +15,6 @@ import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementSetter;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 public class QueueDao {
@@ -162,29 +161,25 @@ public class QueueDao {
         this.txTemplate = transactionTemplate;
     }
 
-    public void insertMessage(Message message, @Nullable Duration processDelay) {
+    public void insertMessage(Message message) {
         Objects.requireNonNull(message);
+        jdbcTemplate.update(INSERT_INTO_PENDING, new InsertPsSetter(message, null));
+    }
 
-        if (processDelay == null) {
-            jdbcTemplate.update(INSERT_INTO_PENDING, new InsertPsSetter(message, null));
-            return;
-        }
+    public void insertMessage(Message message, Duration processDelay) {
+        Objects.requireNonNull(message);
 
         checkDurationIsPositive(processDelay);
         jdbcTemplate.update(INSERT_INTO_INVISIBLE, new InsertPsSetter(message, processDelay));
     }
 
     public void insertMessages(List<Message> messages) {
-        insertMessages(messages, null);
+        Utils.checkNotEmpty(messages);
+        jdbcTemplate.batchUpdate(INSERT_INTO_PENDING, new BatchInsertPsSetter(messages, null));
     }
 
-    public void insertMessages(List<Message> messages, @Nullable Duration processDelay) {
+    public void insertMessages(List<Message> messages, Duration processDelay) {
         Utils.checkNotEmpty(messages);
-
-        if (processDelay == null) {
-            jdbcTemplate.batchUpdate(INSERT_INTO_PENDING, new BatchInsertPsSetter(messages, processDelay));
-            return;
-        }
 
         checkDurationIsPositive(processDelay);
         jdbcTemplate.batchUpdate(INSERT_INTO_INVISIBLE, new BatchInsertPsSetter(messages, processDelay));
@@ -203,8 +198,9 @@ public class QueueDao {
         try {
             txTemplate.executeWithoutResult(ignore -> {
                 // 尝试获取锁
-                boolean locked = tryLockSchedulerInTx();
-                if (!locked) {
+                Boolean locked = jdbcTemplate.queryForObject("SELECT pg_try_advisory_xact_lock(?, ?) AS locked",
+                        boolMapper, PgqConstants.PGQ_ID, PgqConstants.SCHEDULER_ID);
+                if (!Boolean.TRUE.equals(locked)) {
                     return;
                 }
 
@@ -222,19 +218,6 @@ public class QueueDao {
         }
     }
 
-    /**
-     * 尝试获取事务级咨询锁
-     */
-    private boolean tryLockSchedulerInTx() {
-        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
-            throw new IllegalArgumentException("当前事务未激活");
-        }
-
-        String sql = "SELECT pg_try_advisory_xact_lock(?, ?) AS locked";
-        Boolean locked = jdbcTemplate.queryForObject(sql, boolMapper, PgqConstants.PGQ_ID, PgqConstants.SCHEDULER_ID);
-        return Boolean.TRUE.equals(locked);
-    }
-
     @Nullable
     public Message pull(String topic, Duration processTimeout) {
         List<Message> messages = pull(topic, 1, processTimeout);
@@ -249,6 +232,8 @@ public class QueueDao {
         Objects.requireNonNull(topic);
         checkDurationIsPositive(processTimeout);
 
+        LocalDateTime timeoutTime = computeNowPlusOptionalPositiveDuration(processTimeout);
+
         return txTemplate.execute(ignore -> {
             List<Message> messages = jdbcTemplate.query(
                     FIND_PENDING_MESSAGES_SKIP_LOCKED,
@@ -261,51 +246,73 @@ public class QueueDao {
             }
 
             Long[] idArray = getIdArray(messages);
-            jdbcTemplate.update(BATCH_MOVE_PENDING_MESSAGES_TO_PROCESSING, new Object[]{idArray});
+            jdbcTemplate.update(BATCH_MOVE_PENDING_MESSAGES_TO_PROCESSING, idArray, timeoutTime);
             return messages;
         });
     }
 
-    public void completeMessage(Message message, boolean delete) {
+    public void deleteProcessingMessage(Message message) {
         Objects.requireNonNull(message);
 
-        if (delete) {
-            jdbcTemplate.update(DELETE_PROCESSING_MESSAGE, message.getId());
-        } else {
-            jdbcTemplate.update(MOVE_PROCESSING_MESSAGE_TO_COMPLETE, message.getId());
-        }
+        jdbcTemplate.update(DELETE_PROCESSING_MESSAGE, message.getId());
     }
 
-    public void completeMessages(List<Message> messages, boolean delete) {
-        Utils.checkNotEmpty(messages);
-
-        Long[] idArray = getIdArray(messages);
-
-        if (delete) {
-            jdbcTemplate.update(BATCH_DELETE_PROCESSING_MESSAGES, new Object[]{idArray});
-        } else {
-            jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_COMPLETE, new Object[]{idArray});
-        }
-    }
-
-    public void deleteProcessMessages(List<Message> messages) {
+    public void deleteProcessingMessages(List<Message> messages) {
         Utils.checkNotEmpty(messages);
 
         Long[] idArray = getIdArray(messages);
         jdbcTemplate.update(BATCH_DELETE_PROCESSING_MESSAGES, new Object[]{idArray});
     }
 
-    public void deadMessage(Message message) {
+    public void completeProcessingMessage(Message message) {
+        Objects.requireNonNull(message);
+
+        jdbcTemplate.update(MOVE_PROCESSING_MESSAGE_TO_COMPLETE, message.getId());
+    }
+
+    public void completeProcessingMessages(List<Message> messages) {
+        Utils.checkNotEmpty(messages);
+
+        Long[] idArray = getIdArray(messages);
+        jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_COMPLETE, new Object[]{idArray});
+    }
+
+    public void deadProcessingMessage(Message message) {
         Objects.requireNonNull(message);
 
         jdbcTemplate.update(MOVE_PROCESSING_MESSAGE_TO_DEAD, message.getId());
     }
 
-    public void deadMessages(List<Message> messages) {
+    public void deadProcessingMessages(List<Message> messages) {
         Utils.checkNotEmpty(messages);
 
         Long[] idArray = getIdArray(messages);
         jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_DEAD, new Object[]{idArray});
+    }
+
+    public void retryProcessingMessage(Message message, @Nullable Duration processDelay) {
+        Objects.requireNonNull(message);
+
+        LocalDateTime nextVisibleTime = computeNowPlusOptionalPositiveDuration(processDelay);
+        jdbcTemplate.update(MOVE_PROCESSING_MESSAGE_TO_INVISIBLE, message.getId(), nextVisibleTime);
+    }
+
+    public void retryProcessingMessages(List<Message> messages, @Nullable Duration processDelay) {
+        Utils.checkNotEmpty(messages);
+
+        LocalDateTime nextVisibleTime = computeNowPlusOptionalPositiveDuration(processDelay);
+        Long[] idArray = getIdArray(messages);
+        jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_INVISIBLE, idArray, nextVisibleTime);
+    }
+
+    private LocalDateTime computeNowPlusOptionalPositiveDuration(@Nullable Duration duration) {
+        LocalDateTime nextTime = LocalDateTime.now();
+        if (duration != null) {
+            checkDurationIsPositive(duration);
+            nextTime = nextTime.plus(duration);
+        }
+
+        return nextTime;
     }
 
     private Long[] getIdArray(List<Message> messages) {
@@ -316,35 +323,6 @@ public class QueueDao {
         }
 
         return ids;
-    }
-
-    public void retryMessage(Message message, @Nullable Duration processDelay) {
-        Objects.requireNonNull(message);
-
-        LocalDateTime nextVisibleTime = LocalDateTime.now();
-        if (processDelay != null) {
-            checkDurationIsPositive(processDelay);
-            nextVisibleTime = nextVisibleTime.plus(processDelay);
-        }
-
-        jdbcTemplate.update(MOVE_PROCESSING_MESSAGE_TO_INVISIBLE, message.getId(), nextVisibleTime);
-    }
-
-    public void retryMessages(List<Message> messages, @Nullable Duration processDelay) {
-        Utils.checkNotEmpty(messages);
-
-        LocalDateTime nextVisibleTime = LocalDateTime.now();
-        if (processDelay != null) {
-            checkDurationIsPositive(processDelay);
-            nextVisibleTime = nextVisibleTime.plus(processDelay);
-        }
-
-        if (messages.isEmpty()) {
-            return;
-        }
-
-        Long[] idArray = getIdArray(messages);
-        jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_INVISIBLE, idArray, nextVisibleTime);
     }
 
     private static void insertPsSetter(PreparedStatement ps, Message message)
@@ -364,7 +342,7 @@ public class QueueDao {
         }
     }
 
-    private record InsertPsSetter(Message message, Duration processDelay) implements PreparedStatementSetter {
+    private record InsertPsSetter(Message message, @Nullable Duration processDelay) implements PreparedStatementSetter {
 
         @Override
         public void setValues(@NonNull PreparedStatement ps) throws SQLException {
@@ -377,7 +355,7 @@ public class QueueDao {
         }
     }
 
-    private record BatchInsertPsSetter(List<Message> messages, Duration processDelay) implements
+    private record BatchInsertPsSetter(List<Message> messages, @Nullable Duration processDelay) implements
             BatchPreparedStatementSetter {
 
         @Override
