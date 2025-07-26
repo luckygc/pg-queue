@@ -11,8 +11,7 @@ public class TestMessageConfig {
 
     public PgQueue testQueue(PgqManager pgqManager) {
         PgQueue pgQueue = pgqManager.registerQueue("test");
-        TestAbstractMessageProcessor testMessageProcessor = new TestAbstractMessageProcessor();
-        pgqManager.registerMessageProcessor(testMessageProcessor);
+
         return null;
     }
 }

@@ -4,7 +4,7 @@ import github.luckygc.pgq.Message;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-public interface PgQueue {
+public interface PgQueue extends MessageManager {
 
     String getTopic();
 

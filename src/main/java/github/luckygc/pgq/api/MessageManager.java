@@ -21,6 +21,4 @@ public interface MessageManager {
     void dead(Message message);
 
     void dead(List<Message> messages);
-
-
 }
