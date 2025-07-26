@@ -2,6 +2,7 @@ package github.luckygc.pgq;
 
 import github.luckygc.pgq.api.MessageListener;
 import github.luckygc.pgq.api.PgQueue;
+import github.luckygc.pgq.api.ProcessingMessageManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import java.util.List;
 import java.util.Objects;
@@ -14,10 +15,13 @@ public class SingleMessageProcessor implements MessageListener {
     private static final Logger log = LoggerFactory.getLogger(SingleMessageProcessor.class);
     private final Semaphore semaphore;
     private final PgQueue pgQueue;
+    private final ProcessingMessageManager messageManager;
     private final SingleMessageHandler messageHandler;
 
-    public SingleMessageProcessor(PgQueue pgQueue, SingleMessageHandler messageHandler) {
+    public SingleMessageProcessor(PgQueue pgQueue, ProcessingMessageManager messageManager,
+            SingleMessageHandler messageHandler) {
         this.pgQueue = Objects.requireNonNull(pgQueue);
+        this.messageManager = Objects.requireNonNull(messageManager);
         this.messageHandler = Objects.requireNonNull(messageHandler);
 
         if (messageHandler.threadCount() < 1) {
@@ -38,7 +42,7 @@ public class SingleMessageProcessor implements MessageListener {
                 while (!(messages = pgQueue.pull(messageHandler.pullCount())).isEmpty()) {
                     for (Message message : messages) {
                         try {
-                            messageHandler.handle(message);
+                            messageHandler.handle(messageManager, message);
                         } catch (Throwable t) {
                             log.error("处理消息失败", t);
                         }

@@ -1,8 +1,6 @@
 package github.luckygc.pgq;
 
-import github.luckygc.pgq.api.MessageListener;
 import github.luckygc.pgq.api.PgQueue;
-import github.luckygc.pgq.api.ProcessingMessageManager;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -12,32 +10,15 @@ public class PgQueueImpl implements PgQueue {
 
     private final QueueDao queueDao;
     private final String topic;
-    private final ProcessingMessageManager processingMessageManager;
-    @Nullable
-    private final MessageListener messageListener;
 
-    public PgQueueImpl(QueueDao queueDao, String topic, ProcessingMessageManager processingMessageManager,
-            @Nullable MessageListener messageListener) {
+    public PgQueueImpl(QueueDao queueDao, String topic) {
         this.queueDao = Objects.requireNonNull(queueDao);
         this.topic = Objects.requireNonNull(topic);
-        this.processingMessageManager = Objects.requireNonNull(processingMessageManager);
-        this.messageListener = messageListener;
     }
 
     @Override
     public String topic() {
         return topic;
-    }
-
-    @Override
-    public ProcessingMessageManager processingMessageManager() {
-        return processingMessageManager;
-    }
-
-    @Nullable
-    @Override
-    public MessageListener messageListener() {
-        return messageListener;
     }
 
     @Override

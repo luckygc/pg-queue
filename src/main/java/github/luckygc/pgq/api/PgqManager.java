@@ -5,14 +5,16 @@ import org.jspecify.annotations.Nullable;
 
 public interface PgqManager {
 
-    PgQueue registerQueue(String topic);
+    QueueManager register(String topic);
 
-    PgQueue registerQueue(String topic, SingleMessageHandler messageHandler);
+    QueueManager register(String topic, SingleMessageHandler messageHandler);
 
-    PgQueue registerQueue(String topic, BatchMessageHandler messageHandler);
+    QueueManager register(String topic, BatchMessageHandler messageHandler);
 
     @Nullable
-    PgQueue getQueue(String topic);
+    QueueManager getQueue(String topic);
+
+    ProcessingMessageManager processingMessageManager();
 
     void startListen() throws SQLException;
 

@@ -10,7 +10,7 @@ public class TestMessageConfig {
     }
 
     public PgQueue testQueue(PgqManager pgqManager) {
-        PgQueue pgQueue = pgqManager.registerQueue("test");
+
 
         return null;
     }

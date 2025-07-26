@@ -1,9 +1,11 @@
 package github.luckygc.pgq;
 
+import github.luckygc.pgq.api.BatchMessageHandler;
 import github.luckygc.pgq.api.MessageListener;
-import github.luckygc.pgq.api.PgQueue;
 import github.luckygc.pgq.api.PgqManager;
 import github.luckygc.pgq.api.ProcessingMessageManager;
+import github.luckygc.pgq.api.QueueManager;
+import github.luckygc.pgq.api.SingleMessageHandler;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -33,7 +35,7 @@ public class PgqManagerImpl implements PgqManager {
     private static final int VALID_CONNECTION_TIMEOUT_SECONDS = 1;
     private static final long MESSAGE_AVAILABLE_TIMEOUT_MILLIS = Duration.ofMinutes(1).toMillis();
 
-    private final Map<String, PgQueue> queueMap = new ConcurrentHashMap<>();
+    private final Map<String, QueueManager> queueMap = new ConcurrentHashMap<>();
 
     // 监听
     private final String jdbcUrl;
@@ -55,7 +57,7 @@ public class PgqManagerImpl implements PgqManager {
     }
 
     @Override
-    public PgQueue registerQueue(String topic) {
+    public QueueManager register(String topic) {
         Objects.requireNonNull(topic);
 
         return queueMap.compute(topic, (k, v) -> {
@@ -63,27 +65,52 @@ public class PgqManagerImpl implements PgqManager {
                 throw new IllegalStateException("重复注册,topic:%s".formatted(topic));
             }
 
-            return new PgQueueImpl(queueDao, k, processingMessageManager, null);
+            PgQueueImpl pgQueue = new PgQueueImpl(queueDao, k);
+            return new QueueManagerImpl(pgQueue, null);
         });
     }
 
     @Override
-    public PgQueue registerQueue(String topic, MessageListener messageListener) {
+    public QueueManager register(String topic, SingleMessageHandler messageHandler) {
         Objects.requireNonNull(topic);
-        Objects.requireNonNull(messageListener);
+        Objects.requireNonNull(messageHandler);
 
         return queueMap.compute(topic, (k, v) -> {
             if (v != null) {
                 throw new IllegalStateException("重复注册,topic:%s".formatted(topic));
             }
 
-            return new PgQueueImpl(queueDao, k, processingMessageManager, messageListener);
+            PgQueueImpl pgQueue = new PgQueueImpl(queueDao, k);
+            MessageListener messageListener = new SingleMessageProcessor(pgQueue, processingMessageManager,
+                    messageHandler);
+            return new QueueManagerImpl(pgQueue, messageListener);
         });
     }
 
     @Override
-    public @Nullable PgQueue getQueue(String topic) {
+    public QueueManager register(String topic, BatchMessageHandler messageHandler) {
+        Objects.requireNonNull(topic);
+        Objects.requireNonNull(messageHandler);
+
+        return queueMap.compute(topic, (k, v) -> {
+            if (v != null) {
+                throw new IllegalStateException("重复注册,topic:%s".formatted(topic));
+            }
+
+            PgQueueImpl pgQueue = new PgQueueImpl(queueDao, k);
+            MessageListener messageListener = new BatchMessageProcessor(pgQueue, messageHandler);
+            return new QueueManagerImpl(pgQueue, messageListener);
+        });
+    }
+
+    @Override
+    public @Nullable QueueManager getQueue(String topic) {
         return queueMap.get(topic);
+    }
+
+    @Override
+    public ProcessingMessageManager processingMessageManager() {
+        return processingMessageManager;
     }
 
     @Override
@@ -108,7 +135,8 @@ public class PgqManagerImpl implements PgqManager {
             while (listeningFlag.get()) {
                 try {
                     checkConnection();
-                    PGNotification[] notifications = Objects.requireNonNull(con).getNotifications(NOTIFY_TIMEOUT_MILLIS);
+                    PGNotification[] notifications = Objects.requireNonNull(con)
+                            .getNotifications(NOTIFY_TIMEOUT_MILLIS);
                     if (notifications == null) {
                         continue;
                     }
@@ -135,19 +163,21 @@ public class PgqManagerImpl implements PgqManager {
     }
 
     private void handleChannelPayload(String payload) {
-        PgQueue queue = getQueue(payload);
-        if (queue == null) {
+        QueueManager queueManager = getQueue(payload);
+        if (queueManager == null) {
             return;
         }
 
-        MessageListener messageListener = queue.messageListener();
-        if (messageListener != null) {
-            long start = System.currentTimeMillis();
-            messageListener.onMessageAvailable();
-            long end = System.currentTimeMillis();
-            if ((end - start) > MESSAGE_AVAILABLE_TIMEOUT_MILLIS) {
-                logger.warn("onMessageAvailable方法执行时间过长,请不要阻塞调用, topic:{}", payload);
-            }
+        MessageListener messageListener = queueManager.messageListener();
+        if (messageListener == null) {
+            return;
+        }
+
+        long start = System.currentTimeMillis();
+        messageListener.onMessageAvailable();
+        long end = System.currentTimeMillis();
+        if ((end - start) > MESSAGE_AVAILABLE_TIMEOUT_MILLIS) {
+            logger.warn("onMessageAvailable方法执行时间过长,请不要阻塞调用, topic:{}", payload);
         }
     }
 

@@ -9,11 +9,6 @@ public interface PgQueue {
 
     String topic();
 
-    ProcessingMessageManager processingMessageManager();
-
-    @Nullable
-    MessageListener messageListener();
-
     void push(String message);
 
     void push(String message, Duration processDelay);
