@@ -65,27 +65,27 @@ public class Message {
         return attempt;
     }
 
-    protected void setId(Long id) {
+    private void setId(Long id) {
         this.id = id;
     }
 
-    protected void setCreateTime(LocalDateTime createTime) {
+    private void setCreateTime(LocalDateTime createTime) {
         this.createTime = createTime;
     }
 
-    protected void setPayload(String payload) {
+    private void setPayload(String payload) {
         this.payload = payload;
     }
 
-    protected void setTopic(String topic) {
+    private void setTopic(String topic) {
         this.topic = topic;
     }
 
-    protected void setPriority(Integer priority) {
+    private void setPriority(Integer priority) {
         this.priority = priority;
     }
 
-    protected void setAttempt(Integer attempt) {
+    private void setAttempt(Integer attempt) {
         this.attempt = attempt;
     }
 }
