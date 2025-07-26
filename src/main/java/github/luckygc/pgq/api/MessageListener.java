@@ -5,5 +5,5 @@ public interface MessageListener {
     /**
      * 不允许阻塞
      */
-    void onMessageAvailable();
+    void onMessageAvailable(PgQueue queue);
 }

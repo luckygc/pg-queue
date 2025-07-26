@@ -14,7 +14,7 @@ public interface PgqManager {
     QueueManager register(String topic, BatchMessageHandler messageHandler);
 
     @Nullable
-    QueueManager getQueue(String topic);
+    QueueManager getQueueManager(String topic);
 
     ProcessingMessageManager processingMessageManager();
 

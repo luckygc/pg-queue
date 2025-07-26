@@ -13,11 +13,9 @@ public class BatchMessageProcessor implements MessageListener {
 
     private static final Logger log = LoggerFactory.getLogger(BatchMessageProcessor.class);
     private final Semaphore semaphore;
-    private final PgQueue pgQueue;
     private final BatchMessageHandler messageHandler;
 
-    public BatchMessageProcessor(PgQueue pgQueue, BatchMessageHandler messageHandler) {
-        this.pgQueue = Objects.requireNonNull(pgQueue);
+    public BatchMessageProcessor(BatchMessageHandler messageHandler) {
         this.messageHandler = Objects.requireNonNull(messageHandler);
         if (messageHandler.threadCount() < 1) {
             throw new IllegalArgumentException("threadCount必须大于0");
@@ -26,7 +24,7 @@ public class BatchMessageProcessor implements MessageListener {
     }
 
     @Override
-    public void onMessageAvailable() {
+    public void onMessageAvailable(PgQueue queue) {
         if (!semaphore.tryAcquire()) {
             return;
         }
@@ -34,7 +32,7 @@ public class BatchMessageProcessor implements MessageListener {
         Runnable r = () -> {
             try {
                 List<Message> messages;
-                while (!(messages = pgQueue.pull(messageHandler.pullCount())).isEmpty()) {
+                while (!(messages = queue.pull(messageHandler.pullCount())).isEmpty()) {
                     try {
                         messageHandler.handle(messages);
                     } catch (Throwable t) {

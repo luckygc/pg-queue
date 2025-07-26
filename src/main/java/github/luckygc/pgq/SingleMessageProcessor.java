@@ -14,13 +14,11 @@ public class SingleMessageProcessor implements MessageListener {
 
     private static final Logger log = LoggerFactory.getLogger(SingleMessageProcessor.class);
     private final Semaphore semaphore;
-    private final PgQueue pgQueue;
     private final ProcessingMessageManager messageManager;
     private final SingleMessageHandler messageHandler;
 
     public SingleMessageProcessor(PgQueue pgQueue, ProcessingMessageManager messageManager,
             SingleMessageHandler messageHandler) {
-        this.pgQueue = Objects.requireNonNull(pgQueue);
         this.messageManager = Objects.requireNonNull(messageManager);
         this.messageHandler = Objects.requireNonNull(messageHandler);
 
@@ -31,7 +29,7 @@ public class SingleMessageProcessor implements MessageListener {
     }
 
     @Override
-    public void onMessageAvailable() {
+    public void onMessageAvailable(PgQueue queue) {
         if (!semaphore.tryAcquire()) {
             return;
         }
@@ -39,7 +37,7 @@ public class SingleMessageProcessor implements MessageListener {
         Runnable r = () -> {
             try {
                 List<Message> messages;
-                while (!(messages = pgQueue.pull(messageHandler.pullCount())).isEmpty()) {
+                while (!(messages = queue.pull(messageHandler.pullCount())).isEmpty()) {
                     for (Message message : messages) {
                         try {
                             messageHandler.handle(messageManager, message);
