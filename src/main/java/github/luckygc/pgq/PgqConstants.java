@@ -19,5 +19,5 @@ public class PgqConstants {
 
     public static final int PGQ_ID = 199738;
     public static final int SCHEDULER_ID = 1;
-    public static final String CHANNEL_NAME = "pgq_topic_channel";
+    public static final String TOPIC_CHANNEL = "pgq_topic_channel";
 }

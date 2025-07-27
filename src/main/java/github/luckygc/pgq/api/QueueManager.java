@@ -7,20 +7,20 @@ public interface QueueManager {
 
     DatabaseQueue queue(String topic);
 
+    MessageManager messageManager();
+
+    DeadMessageManger deadMessageManager();
+
     void registerListener(QueueListener messageListener);
+
+    @Nullable
+    QueueListener listener(String topic);
 
     void registerMessageHandler(SingleMessageHandler messageHandler);
 
     void registerMessageHandler(BatchMessageHandler messageHandler);
 
-    @Nullable
-    QueueListener listener(String topic);
+    void startListen() throws SQLException;
 
-    MessageManager messageManager();
-
-    DeadMessageManger deadMessageManager();
-
-    void start() throws SQLException;
-
-    void stop();
+    void stopListen();
 }

@@ -222,7 +222,7 @@ public class QueueDao {
                 jdbcTemplate.update(MOVE_TIMEOUT_MESSAGES_TO_PENDING);
 
                 // 查询有可处理消息的topic并发出通知
-                jdbcTemplate.update(NOTIFY_AVAILABLE_TOPIC, PgqConstants.CHANNEL_NAME);
+                jdbcTemplate.update(NOTIFY_AVAILABLE_TOPIC, PgqConstants.TOPIC_CHANNEL);
             });
         } catch (Throwable t) {
             log.error("调度失败", t);
