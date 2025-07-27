@@ -9,7 +9,6 @@
 - **优先级队列**: 支持消息优先级，高优先级消息优先处理
 - **重试机制**: 支持消息处理失败延时重试
 - **死信队列**: 支持手动发送消息到死信队列
-- **批量处理**: 支持单条和批量消息处理
 - **集群**: 可选的PostgreSQL NOTIFY机制，实现集群消息可用推送
 - **批处理**: 支持批量操作
 
@@ -18,10 +17,17 @@
 ### 1. 添加依赖
 
 ```xml
+
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
 <dependency>
-    <groupId>com.github.luckygc</groupId>
-    <artifactId>pg-queue</artifactId>
-    <version>1.0.0</version>
+<groupId>com.github.luckygc</groupId>
+<artifactId>pg-queue</artifactId>
+<version>1.1.0</version>
 </dependency>
 ```
 
