@@ -24,7 +24,6 @@ public class PgListener {
     private static final long RECONNECT_RETRY_DELAY_NANOS = TimeUnit.SECONDS.toNanos(10);
     private static final long FIRST_RECONNECT_DELAY_NANOS = TimeUnit.SECONDS.toNanos(5);
     private static final int VALID_CONNECTION_TIMEOUT_SECONDS = 1;
-    private static final long MESSAGE_AVAILABLE_TIMEOUT_MILLIS = Duration.ofMinutes(1).toMillis();
 
     // 监听
     private final String channel;

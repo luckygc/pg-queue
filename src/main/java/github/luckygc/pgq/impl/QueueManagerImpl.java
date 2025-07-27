@@ -1,5 +1,6 @@
 package github.luckygc.pgq.impl;
 
+import github.luckygc.pgq.QueueListenerDispatcher;
 import github.luckygc.pgq.PgListener;
 import github.luckygc.pgq.PgqConstants;
 import github.luckygc.pgq.QueueDao;
@@ -42,7 +43,9 @@ public class QueueManagerImpl implements QueueManager {
             TransactionTemplate transactionTemplate) {
         this.queueDao = new QueueDao(jdbcTemplate, transactionTemplate);
         this.messageManager = new MessageManagerImpl(queueDao);
-        pgListener = new PgListener(PgqConstants.TOPIC_CHANNEL, jdbcUrl, username, password, this::dispatch);
+        QueueListenerDispatcher queueListenerDispatcher = new QueueListenerDispatcher(this);
+        pgListener = new PgListener(PgqConstants.TOPIC_CHANNEL, jdbcUrl, username, password,
+                queueListenerDispatcher::dispatch);
     }
 
     @Override
@@ -101,19 +104,5 @@ public class QueueManagerImpl implements QueueManager {
     @Override
     public void stopListen() {
         pgListener.stop();
-    }
-
-    private void dispatch(String topic) {
-        QueueListener listener = listenerMap.get(topic);
-        if (listener == null) {
-            return;
-        }
-
-        long start = System.currentTimeMillis();
-        listener.onMessageAvailable();
-        long end = System.currentTimeMillis();
-        if ((end - start) > MESSAGE_AVAILABLE_TIMEOUT_MILLIS) {
-            log.warn("onMessageAvailable方法执行时间过长,请不要阻塞调用, topic:{}", topic);
-        }
     }
 }
