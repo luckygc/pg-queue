@@ -1,7 +1,6 @@
 package github.luckygc.pgq;
 
 import github.luckygc.pgq.api.QueueListener;
-import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
@@ -14,7 +13,6 @@ public class ListenerDispatcher {
     private static final Logger log = LoggerFactory.getLogger(ListenerDispatcher.class);
 
     private final Map<String, QueueListener> listenerMap = new ConcurrentHashMap<>();
-    private static final long DISPATCH_TIMEOUT_MILLIS = Duration.ofMinutes(1).toMillis();
 
     public void registerListener(QueueListener listener) {
         QueueListener queueListener = listenerMap.putIfAbsent(listener.topic(), listener);
@@ -43,11 +41,6 @@ public class ListenerDispatcher {
             return;
         }
 
-        long start = System.currentTimeMillis();
         listener.onMessageAvailable();
-        long end = System.currentTimeMillis();
-        if ((end - start) > DISPATCH_TIMEOUT_MILLIS) {
-            log.warn("onMessageAvailable方法执行时间过长,请不要阻塞调用, topic:{}", topic);
-        }
     }
 }
