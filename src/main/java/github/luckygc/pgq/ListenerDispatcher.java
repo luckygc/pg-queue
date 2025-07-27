@@ -1,6 +1,7 @@
 package github.luckygc.pgq;
 
 import github.luckygc.pgq.api.QueueListener;
+import github.luckygc.pgq.impl.AbstractMessagesProcessor;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
@@ -42,5 +43,34 @@ public class ListenerDispatcher {
         }
 
         listener.onMessageAvailable();
+    }
+
+    /**
+     * 关闭所有消息处理器的线程池
+     */
+    public void shutdown() {
+        for (QueueListener listener : listenerMap.values()) {
+            if (listener instanceof AbstractMessagesProcessor processor) {
+                try {
+                    processor.shutdown();
+                    log.debug("已关闭消息处理器线程池: topic={}", listener.topic());
+                } catch (Exception e) {
+                    log.error("关闭消息处理器线程池失败: topic={}", listener.topic(), e);
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取所有消息处理器的线程池状态，用于监控
+     */
+    public Map<String, String> getThreadPoolStatus() {
+        Map<String, String> statusMap = new ConcurrentHashMap<>();
+        for (Map.Entry<String, QueueListener> entry : listenerMap.entrySet()) {
+            if (entry.getValue() instanceof AbstractMessagesProcessor processor) {
+                statusMap.put(entry.getKey(), processor.getThreadPoolStatus());
+            }
+        }
+        return statusMap;
     }
 }

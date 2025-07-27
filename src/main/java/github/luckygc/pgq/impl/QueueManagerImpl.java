@@ -107,7 +107,7 @@ public class QueueManagerImpl implements QueueManager {
     @Override
     public void start(long loopIntervalSeconds) throws SQLException {
         if (loopIntervalSeconds < 1) {
-            throw new IllegalArgumentException("queueManagerDao必须大于0");
+            throw new IllegalArgumentException("loopIntervalSeconds必须大于0");
         }
 
         if (enablePgNotify) {
@@ -141,6 +141,14 @@ public class QueueManagerImpl implements QueueManager {
         scheduler.shutdownNow();
         scheduler = null;
 
+        // 关闭所有消息处理器的线程池
+        listenerDispatcher.shutdown();
+
         log.debug("停止pgq成功");
+    }
+
+    @Override
+    public Map<String, String> getThreadPoolStatus() {
+        return listenerDispatcher.getThreadPoolStatus();
     }
 }

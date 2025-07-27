@@ -1,6 +1,7 @@
 package github.luckygc.pgq.api;
 
 import java.sql.SQLException;
+import java.util.Map;
 
 public interface QueueManager {
 
@@ -24,4 +25,11 @@ public interface QueueManager {
     void start(long loopIntervalSeconds) throws SQLException;
 
     void stop();
+
+    /**
+     * 获取所有消息处理器的线程池状态，用于监控
+     * 
+     * @return Map<topic, threadPoolStatus>
+     */
+    Map<String, String> getThreadPoolStatus();
 }
