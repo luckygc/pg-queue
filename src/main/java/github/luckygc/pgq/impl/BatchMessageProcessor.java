@@ -33,7 +33,7 @@ public class BatchMessageProcessor extends AbstractMessagesProcessor {
             List<Message> messages;
             while (!(messages = queue.pull(messageHandler.pullCount())).isEmpty()) {
                 try {
-                    messageHandler.handle(messages);
+                    messageHandler.handle(messageManager, messages);
                 } catch (Throwable t) {
                     log.error("处理消息失败", t);
                 }
