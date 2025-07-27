@@ -23,8 +23,6 @@ public interface QueueManager {
 
     /**
      * 获取所有消息处理器的线程池状态，用于监控
-     *
-     * @return Map<topic, threadPoolStatus>
      */
     Map<String, String> getThreadPoolStatus();
 }
