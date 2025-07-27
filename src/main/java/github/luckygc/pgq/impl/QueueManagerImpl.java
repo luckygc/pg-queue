@@ -3,21 +3,22 @@ package github.luckygc.pgq.impl;
 import github.luckygc.pgq.ListenerDispatcher;
 import github.luckygc.pgq.PgChannelListener;
 import github.luckygc.pgq.PgqConstants;
-import github.luckygc.pgq.QueueDao;
+import github.luckygc.pgq.MessageDao;
+import github.luckygc.pgq.QueueManagerDao;
 import github.luckygc.pgq.api.BatchMessageHandler;
 import github.luckygc.pgq.api.DatabaseQueue;
 import github.luckygc.pgq.api.DeadMessageManger;
 import github.luckygc.pgq.api.MessageManager;
-import github.luckygc.pgq.api.QueueListener;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -28,30 +29,36 @@ public class QueueManagerImpl implements QueueManager {
     private static final Logger log = LoggerFactory.getLogger(QueueManagerImpl.class);
 
     private final Map<String, DatabaseQueue> queueMap = new ConcurrentHashMap<>();
-    private final Map<String, QueueListener> listenerMap = new ConcurrentHashMap<>();
 
     private final ListenerDispatcher listenerDispatcher;
-    private final boolean isEnablePgNotify;
-    private PgChannelListener pgChannelListener;
-    private final QueueDao queueDao;
+    private final QueueManagerDao queueManagerDao;
+    private final MessageDao messageDao;
     private final MessageManager messageManager;
+    private final DeadMessageManger deadMessageManger;
     private ScheduledExecutorService scheduler;
 
+    private final boolean enablePgNotify;
+    private PgChannelListener pgChannelListener;
+
     public QueueManagerImpl(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
-        this.listenerDispatcher = new ListenerDispatcher(this);
-        this.queueDao = new QueueDao(jdbcTemplate, transactionTemplate, listenerDispatcher, false);
-        this.messageManager = new MessageManagerImpl(queueDao);
-        this.isEnablePgNotify = false;
+        this.enablePgNotify = false;
+        this.listenerDispatcher = new ListenerDispatcher();
+        this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
+        this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
+        this.messageManager = new MessageManagerImpl(messageDao);
+        this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
     }
 
     public QueueManagerImpl(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate, String jdbcUrl,
             String username, String password) {
-        this.listenerDispatcher = new ListenerDispatcher(this);
-        this.queueDao = new QueueDao(jdbcTemplate, transactionTemplate, listenerDispatcher, true);
-        this.messageManager = new MessageManagerImpl(queueDao);
-        this.isEnablePgNotify = true;
-        this.pgChannelListener = new PgChannelListener(PgqConstants.TOPIC_CHANNEL, jdbcUrl, username, password,
-                listenerDispatcher);
+        this.enablePgNotify = true;
+        this.listenerDispatcher = new ListenerDispatcher();
+        this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
+        this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
+        this.messageManager = new MessageManagerImpl(messageDao);
+        this.pgChannelListener = new PgChannelListener(PgqConstants.TOPIC_CHANNEL, Objects.requireNonNull(jdbcUrl),
+                Objects.requireNonNull(username), password, listenerDispatcher);
+        this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
     }
 
     @Override
@@ -61,35 +68,22 @@ public class QueueManagerImpl implements QueueManager {
                 return v;
             }
 
-            return new DatabaseQueueImpl(queueDao, k, listenerDispatcher);
+            return new DatabaseQueueImpl(messageDao, k, listenerDispatcher);
         });
-    }
-
-    @Override
-    public void registerListener(QueueListener messageListener) {
-        QueueListener queueListener = listenerMap.putIfAbsent(messageListener.topic(), messageListener);
-        if (queueListener != null) {
-            throw new IllegalStateException("当前已存在topic[{}]的监听器");
-        }
     }
 
     @Override
     public void registerMessageHandler(SingleMessageHandler messageHandler) {
         DatabaseQueue queue = queue(messageHandler.topic());
         SingleMessageProcessor processor = new SingleMessageProcessor(queue, messageManager, messageHandler);
-        registerListener(processor);
+        listenerDispatcher.registerListener(processor);
     }
 
     @Override
     public void registerMessageHandler(BatchMessageHandler messageHandler) {
         DatabaseQueue queue = queue(messageHandler.topic());
         BatchMessageProcessor processor = new BatchMessageProcessor(queue, messageManager, messageHandler);
-        registerListener(processor);
-    }
-
-    @Override
-    public @Nullable QueueListener listener(String topic) {
-        return listenerMap.get(topic);
+        listenerDispatcher.registerListener(processor);
     }
 
     @Override
@@ -99,32 +93,51 @@ public class QueueManagerImpl implements QueueManager {
 
     @Override
     public DeadMessageManger deadMessageManager() {
-        return null;
+        return deadMessageManger;
     }
 
     @Override
     public boolean isEnablePgNotify() {
-        return false;
+        return enablePgNotify;
     }
 
     @Override
     public void start(long loopIntervalSeconds) throws SQLException {
-        if (isEnablePgNotify) {
+        if (loopIntervalSeconds < 1) {
+            throw new IllegalArgumentException("queueManagerDao必须day0");
+        }
+
+        if (enablePgNotify) {
             pgChannelListener.startListen();
         }
 
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleWithFixedDelay(queueDao::tryHandleTimeoutAndVisibleMessagesThenDispatchAndOptionalSendNotify,
-                0, loopIntervalSeconds, TimeUnit.SECONDS);
+        scheduler.scheduleWithFixedDelay(this::schedule, 0, loopIntervalSeconds, TimeUnit.SECONDS);
+
+        log.debug("启动pgq成功");
+    }
+
+    private void schedule() {
+        List<String> topics = queueManagerDao.tryHandleTimeoutAndVisibleMessagesAndReturnTopicsWithAvailableMessages(
+                enablePgNotify);
+        if (topics.isEmpty()) {
+            return;
+        }
+
+        for (String topic : topics) {
+            listenerDispatcher.dispatch(topic);
+        }
     }
 
     @Override
     public void stop() {
-        if (isEnablePgNotify) {
+        if (enablePgNotify) {
             pgChannelListener.stopListen();
         }
 
         scheduler.shutdownNow();
         scheduler = null;
+
+        log.debug("停止pgq成功");
     }
 }

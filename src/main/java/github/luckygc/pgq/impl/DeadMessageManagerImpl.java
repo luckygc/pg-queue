@@ -1,5 +1,23 @@
 package github.luckygc.pgq.impl;
 
-public class DeadMessageManagerImpl {
+import github.luckygc.pgq.MessageDao;
+import github.luckygc.pgq.api.DeadMessageManger;
 
+public class DeadMessageManagerImpl implements DeadMessageManger {
+
+    private final MessageDao messageDao;
+
+    public DeadMessageManagerImpl(MessageDao messageDao) {
+        this.messageDao = messageDao;
+    }
+
+    @Override
+    public void retry(String topic) {
+
+    }
+
+    @Override
+    public void delete(String topic) {
+
+    }
 }

@@ -1,7 +1,6 @@
 package github.luckygc.pgq.api;
 
 import java.sql.SQLException;
-import org.jspecify.annotations.Nullable;
 
 public interface QueueManager {
 
@@ -12,11 +11,6 @@ public interface QueueManager {
     DeadMessageManger deadMessageManager();
 
     boolean isEnablePgNotify();
-
-    void registerListener(QueueListener messageListener);
-
-    @Nullable
-    QueueListener listener(String topic);
 
     void registerMessageHandler(SingleMessageHandler messageHandler);
 

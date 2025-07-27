@@ -1,9 +1,9 @@
 package github.luckygc.pgq;
 
 import github.luckygc.pgq.api.QueueListener;
-import github.luckygc.pgq.api.QueueManager;
 import java.time.Duration;
-import java.util.Objects;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -13,11 +13,14 @@ public class ListenerDispatcher {
 
     private static final Logger log = LoggerFactory.getLogger(ListenerDispatcher.class);
 
-    private final QueueManager queueManager;
+    private final Map<String, QueueListener> listenerMap = new ConcurrentHashMap<>();
     private static final long DISPATCH_TIMEOUT_MILLIS = Duration.ofMinutes(1).toMillis();
 
-    public ListenerDispatcher(QueueManager queueManager) {
-        this.queueManager = Objects.requireNonNull(queueManager);
+    public void registerListener(QueueListener listener) {
+        QueueListener queueListener = listenerMap.putIfAbsent(listener.topic(), listener);
+        if (queueListener != null) {
+            throw new IllegalStateException("当前已存在topic[{}]的监听器");
+        }
     }
 
     public void dispatchWithCheckTx(String topic) {
@@ -35,7 +38,7 @@ public class ListenerDispatcher {
     }
 
     public void dispatch(String topic) {
-        QueueListener listener = queueManager.listener(topic);
+        QueueListener listener = listenerMap.get(topic);
         if (listener == null) {
             return;
         }

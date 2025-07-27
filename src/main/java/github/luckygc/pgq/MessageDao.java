@@ -16,12 +16,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementSetter;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.transaction.support.TransactionTemplate;
 
-public class QueueDao {
+public class MessageDao {
 
-    private static final Logger log = LoggerFactory.getLogger(QueueDao.class);
+    private static final Logger log = LoggerFactory.getLogger(MessageDao.class);
 
     // 插入
     private static final String INSERT_INTO_PENDING = """
@@ -57,25 +56,7 @@ public class QueueDao {
                     limit ?
                     for update skip locked
             """;
-    private static final String MOVE_TIMEOUT_MESSAGES_TO_PENDING = """
-            with message_to_pending as (
-                delete from pgq_processing_queue where timeout_time <= now()
-                returning id, create_time, topic, priority, payload, attempt
-            ) insert into pgq_pending_queue
-                      (id, create_time, topic, priority, payload, attempt)
-                select id, create_time, topic, priority, payload, attempt from message_to_pending
-            """;
-    private static final String MOVE_VISIBLE_MESSAGES_TO_PENDING = """
-            with message_to_pending as (
-                delete from pgq_invisible_queue where visible_time <= now()
-                returning id, create_time, topic, priority, payload, attempt
-            ) insert into pgq_pending_queue
-                      (id, create_time, topic, priority, payload, attempt)
-                select id, create_time, topic, priority, payload, attempt from message_to_pending
-            """;
-    private static final String FIND_AVAILABLE_TOPIC = """
-            select distinct topic from pgq_pending_queue
-            """;
+
 
     private static final String MOVE_PROCESSING_MESSAGE_TO_COMPLETE = """
             with message_to_complete as (
@@ -160,21 +141,12 @@ public class QueueDao {
             select id, create_time, topic, priority, payload, attempt from message_to_retry
             """;
 
-    private static final RowMapper<Boolean> boolMapper = (rs, ignore) -> rs.getBoolean(1);
-    private static final RowMapper<String> stringMapper = (rs, ignore) -> rs.getString(1);
-    private static final RowMapper<Void> emptyMapper = (rs, ignore) -> null;
-
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate txTemplate;
-    private final ListenerDispatcher listenerDispatcher;
-    private final boolean isEnablePgNotify;
 
-    public QueueDao(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate,
-            ListenerDispatcher listenerDispatcher, boolean enablePgNotify) {
+    public MessageDao(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
         this.txTemplate = Objects.requireNonNull(transactionTemplate);
-        this.listenerDispatcher = Objects.requireNonNull(listenerDispatcher);
-        this.isEnablePgNotify = enablePgNotify;
     }
 
     public void insertMessage(Message message) {
@@ -207,45 +179,6 @@ public class QueueDao {
         }
     }
 
-    /**
-     * 批量把到时间的不可见消息移入待处理队列,把处理超时任务重新移回待处理队列,并发送通知提醒有可用消息
-     */
-    public void tryHandleTimeoutAndVisibleMessagesThenDispatchAndOptionalSendNotify() {
-        try {
-            txTemplate.executeWithoutResult(ignore -> {
-                // 尝试获取锁
-                Boolean locked = jdbcTemplate.queryForObject("SELECT pg_try_advisory_xact_lock(?, ?) AS locked",
-                        boolMapper, PgqConstants.PGQ_ID, PgqConstants.SCHEDULER_ID);
-                if (!Boolean.TRUE.equals(locked)) {
-                    return;
-                }
-
-                // 将可见消息移动到待处理队列
-                jdbcTemplate.update(MOVE_VISIBLE_MESSAGES_TO_PENDING, LocalDateTime.now());
-
-                // 将处理超时消息移动到待处理队列
-                jdbcTemplate.update(MOVE_TIMEOUT_MESSAGES_TO_PENDING);
-
-                // 查询有可处理消息的topic并发出通知
-                List<String> topics = jdbcTemplate.query(FIND_AVAILABLE_TOPIC, stringMapper);
-                if (topics.isEmpty()) {
-                    return;
-                }
-
-                for (String topic : topics) {
-                    listenerDispatcher.dispatchWithCheckTx(topic);
-                }
-
-                if (isEnablePgNotify) {
-                    for (String topic : topics) {
-                        jdbcTemplate.query("select pg_notify(?, ?)", emptyMapper, PgqConstants.TOPIC_CHANNEL, topic);
-                    }
-                }
-            });
-        } catch (Throwable t) {
-            log.error("调度失败", t);
-        }
-    }
 
     public List<Message> pull(String topic, int pullCount, Duration processTimeout) {
         Objects.requireNonNull(topic);
