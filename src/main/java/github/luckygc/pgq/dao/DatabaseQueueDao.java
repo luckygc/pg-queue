@@ -56,6 +56,8 @@ public class DatabaseQueueDao {
                     for update skip locked
             """;
 
+    private static final long MAX_PROCESS_TIMEOUT_MILLIS = Duration.ofMinutes(30).toMillis();
+
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate txTemplate;
 
@@ -95,9 +97,11 @@ public class DatabaseQueueDao {
         }
         Objects.requireNonNull(processTimeout);
         Utils.checkDurationIsPositive(processTimeout);
+        if (processTimeout.toMillis() > MAX_PROCESS_TIMEOUT_MILLIS) {
+            throw new IllegalArgumentException("processTimeout不允许超过30分钟");
+        }
 
         LocalDateTime timeoutTime = LocalDateTime.now().plus(processTimeout);
-
         List<Message> messageObjs = txTemplate.execute(ignore -> {
             List<Message> messages = jdbcTemplate.query(
                     FIND_PENDING_MESSAGES_SKIP_LOCKED,

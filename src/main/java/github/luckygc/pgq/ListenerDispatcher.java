@@ -17,7 +17,7 @@ public class ListenerDispatcher {
     public void registerListener(QueueListener listener) {
         QueueListener queueListener = listenerMap.putIfAbsent(listener.topic(), listener);
         if (queueListener != null) {
-            throw new IllegalStateException("当前已存在topic[{}]的监听器");
+            throw new IllegalStateException("当前已存在topic[%s]的监听器".formatted(listener.topic()));
         }
     }
 

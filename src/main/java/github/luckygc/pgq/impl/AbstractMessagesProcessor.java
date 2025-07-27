@@ -5,6 +5,7 @@ import github.luckygc.pgq.api.ProcessingMessageManager;
 import github.luckygc.pgq.api.QueueListener;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,15 +16,17 @@ public abstract class AbstractMessagesProcessor implements QueueListener {
     protected final DatabaseQueue queue;
     protected final ProcessingMessageManager processingMessageManager;
     protected final Semaphore semaphore;
+    private final AtomicInteger threadCount = new AtomicInteger(0);
 
     public AbstractMessagesProcessor(DatabaseQueue queue, ProcessingMessageManager processingMessageManager,
-            Semaphore semaphore) {
+            int threadCount) {
         this.queue = Objects.requireNonNull(queue);
         this.processingMessageManager = Objects.requireNonNull(processingMessageManager);
-        this.semaphore = Objects.requireNonNull(semaphore);
-        if (semaphore.availablePermits() < 1) {
-            throw new IllegalArgumentException("线程数必须大于0");
+        if (threadCount < 1 || threadCount > 200) {
+            throw new IllegalArgumentException("线程数必须在1到200之间");
         }
+
+        this.semaphore = new Semaphore(threadCount);
     }
 
     @Override
@@ -33,7 +36,8 @@ public abstract class AbstractMessagesProcessor implements QueueListener {
         }
 
         try {
-            Thread thread = new Thread(this::processMessages);
+            Thread thread = new Thread(this::processMessages,
+                    "pgq-message-processor-%d".formatted(threadCount.incrementAndGet()));
             thread.setDaemon(true);
             thread.start();
         } catch (Throwable t) {

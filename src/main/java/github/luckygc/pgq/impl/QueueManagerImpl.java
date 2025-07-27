@@ -107,7 +107,7 @@ public class QueueManagerImpl implements QueueManager {
     @Override
     public void start(long loopIntervalSeconds) throws SQLException {
         if (loopIntervalSeconds < 1) {
-            throw new IllegalArgumentException("queueManagerDao必须day0");
+            throw new IllegalArgumentException("queueManagerDao必须大于0");
         }
 
         if (enablePgNotify) {

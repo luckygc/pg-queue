@@ -6,7 +6,6 @@ import github.luckygc.pgq.api.ProcessingMessageManager;
 import github.luckygc.pgq.model.Message;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.Semaphore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +17,7 @@ public class BatchMessageProcessor extends AbstractMessagesProcessor {
 
     public BatchMessageProcessor(DatabaseQueue queue, ProcessingMessageManager processingMessageManager,
             BatchMessageHandler messageHandler) {
-        super(queue, processingMessageManager, new Semaphore(messageHandler.threadCount()));
+        super(queue, processingMessageManager, messageHandler.threadCount());
         this.messageHandler = Objects.requireNonNull(messageHandler);
     }
 
@@ -31,7 +30,11 @@ public class BatchMessageProcessor extends AbstractMessagesProcessor {
     public void processMessages() {
         try {
             List<Message> messages;
-            while (!(messages = queue.pull(messageHandler.pullCount())).isEmpty()) {
+            int pullCount = messageHandler.pullCount();
+            if (pullCount < 1 || pullCount > 5000) {
+                throw new IllegalStateException("pullCount必须在1到5000之间");
+            }
+            while (!(messages = queue.pull(pullCount)).isEmpty()) {
                 try {
                     messageHandler.handle(processingMessageManager, messages);
                 } catch (Throwable t) {

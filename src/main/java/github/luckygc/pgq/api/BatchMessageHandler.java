@@ -6,10 +6,16 @@ import java.util.List;
 
 public interface BatchMessageHandler {
 
+    /**
+     * 范围[1,5000]
+     */
     default int pullCount() {
         return PgqConstants.MESSAGE_HANDLER_PULL_COUNT;
     }
 
+    /**
+     * 范围[1,200]
+     */
     default int threadCount() {
         return PgqConstants.MESSAGE_HANDLER_THREAD_COUNT;
     }
