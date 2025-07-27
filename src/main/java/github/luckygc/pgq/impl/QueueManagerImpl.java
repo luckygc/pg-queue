@@ -109,17 +109,13 @@ public class QueueManagerImpl implements QueueManager {
     }
 
     @Override
-    public void start(long loopIntervalSeconds) throws SQLException {
-        if (loopIntervalSeconds < 1) {
-            throw new IllegalArgumentException("loopIntervalSeconds必须大于0");
-        }
-
+    public void start() throws SQLException {
         if (enablePgNotify) {
             pgChannelListener.startListen();
         }
 
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleWithFixedDelay(this::schedule, 0, loopIntervalSeconds, TimeUnit.SECONDS);
+        scheduler.scheduleWithFixedDelay(this::schedule, 0, 1, TimeUnit.MINUTES);
 
         log.debug("启动pgq成功");
     }

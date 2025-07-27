@@ -72,7 +72,7 @@ public class DemoMessageConfig {
         queueManagerWithEnablePgNotify.queue("test2").push("sss");
 
         try {
-            queueManagerWithEnablePgNotify.start(10);
+            queueManagerWithEnablePgNotify.start();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
