@@ -11,6 +11,8 @@ public interface QueueManager {
 
     DeadMessageManger deadMessageManager();
 
+    boolean isEnablePgNotify();
+
     void registerListener(QueueListener messageListener);
 
     @Nullable
@@ -20,7 +22,7 @@ public interface QueueManager {
 
     void registerMessageHandler(BatchMessageHandler messageHandler);
 
-    void startListen() throws SQLException;
+    void start() throws SQLException;
 
-    void stopListen();
+    void stop();
 }

@@ -73,6 +73,9 @@ public class QueueDao {
                       (id, create_time, topic, priority, payload, attempt)
                 select id, create_time, topic, priority, payload, attempt from message_to_pending
             """;
+    private static final String FIND_AVAILABLE_TOPIC = """
+            select distinct topic from pgq_pending_queue
+            """;
     private static final String NOTIFY_AVAILABLE_TOPIC = """
             with topic_to_notify as (
                 select distinct topic from pgq_pending_queue
@@ -163,13 +166,19 @@ public class QueueDao {
             """;
 
     private static final RowMapper<Boolean> boolMapper = (rs, ignore) -> rs.getBoolean(1);
+    private static final RowMapper<String> stringMapper = (rs, ignore) -> rs.getString(1);
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate txTemplate;
+    private final ListenerDispatcher listenerDispatcher;
+    private final boolean isEnablePgNotify;
 
-    public QueueDao(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
+    public QueueDao(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate,
+            ListenerDispatcher listenerDispatcher, boolean enablePgNotify) {
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
         this.txTemplate = Objects.requireNonNull(transactionTemplate);
+        this.listenerDispatcher = Objects.requireNonNull(listenerDispatcher);
+        this.isEnablePgNotify = enablePgNotify;
     }
 
     public void insertMessage(Message message) {
@@ -222,7 +231,14 @@ public class QueueDao {
                 jdbcTemplate.update(MOVE_TIMEOUT_MESSAGES_TO_PENDING);
 
                 // 查询有可处理消息的topic并发出通知
-                jdbcTemplate.update(NOTIFY_AVAILABLE_TOPIC, PgqConstants.TOPIC_CHANNEL);
+                if (isEnablePgNotify) {
+                    jdbcTemplate.update(NOTIFY_AVAILABLE_TOPIC, PgqConstants.TOPIC_CHANNEL);
+                } else {
+                    List<String> topics = jdbcTemplate.query(FIND_AVAILABLE_TOPIC, stringMapper);
+                    for (String topic : topics) {
+                        listenerDispatcher.dispatchWithCheckTx(topic);
+                    }
+                }
             });
         } catch (Throwable t) {
             log.error("调度失败", t);

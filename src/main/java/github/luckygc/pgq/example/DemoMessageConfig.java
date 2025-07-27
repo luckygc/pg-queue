@@ -67,7 +67,7 @@ public class DemoMessageConfig {
         queueManager.queue("test2").push("sss");
 
         try {
-            queueManager.startListen();
+            queueManager.start();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

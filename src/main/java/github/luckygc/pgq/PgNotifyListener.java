@@ -4,21 +4,19 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
-import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 import org.postgresql.PGNotification;
 import org.postgresql.jdbc.PgConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PgListener {
+public class PgNotifyListener {
 
-    private static final Logger log = LoggerFactory.getLogger(PgListener.class);
+    private static final Logger log = LoggerFactory.getLogger(PgNotifyListener.class);
 
     private static final int LISTEN_CHANNEL_TIMEOUT_MILLIS = Math.toIntExact(TimeUnit.SECONDS.toMillis(20));
     private static final long RECONNECT_RETRY_DELAY_NANOS = TimeUnit.SECONDS.toNanos(10);
@@ -30,17 +28,18 @@ public class PgListener {
     private final String jdbcUrl;
     private final String username;
     private final String password;
-    private final Consumer<String> consumer;
+    private final ListenerDispatcher listenerDispatcher;
 
     private final AtomicBoolean runningFlag = new AtomicBoolean(false);
     private volatile @Nullable PgConnection con;
 
-    public PgListener(String channel, String jdbcUrl, String username, String password, Consumer<String> consumer) {
+    public PgNotifyListener(String channel, String jdbcUrl, String username, String password,
+            ListenerDispatcher listenerDispatcher) {
         this.channel = Objects.requireNonNull(channel);
         this.jdbcUrl = Objects.requireNonNull(jdbcUrl);
         this.username = Objects.requireNonNull(username);
         this.password = password;
-        this.consumer = Objects.requireNonNull(consumer);
+        this.listenerDispatcher = Objects.requireNonNull(listenerDispatcher);
     }
 
     public void start() throws SQLException {
@@ -76,7 +75,11 @@ public class PgListener {
                     int pid = notification.getPID();
                     log.debug("收到消息, topic:{}, pid:{}", topic, pid);
 
-                    consumer.accept(topic);
+                    try {
+                        listenerDispatcher.dispatch(topic);
+                    } catch (Throwable t) {
+                        log.error("调度队列监听器失败", t);
+                    }
                 }
             } catch (SQLException e) {
                 log.error("读取通知失败", e);
