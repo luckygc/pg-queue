@@ -76,11 +76,6 @@ public class QueueDao {
     private static final String FIND_AVAILABLE_TOPIC = """
             select distinct topic from pgq_pending_queue
             """;
-    private static final String NOTIFY_AVAILABLE_TOPIC = """
-            with topic_to_notify as (
-                select distinct topic from pgq_pending_queue
-            ) select pg_notify(?, topic) from topic_to_notify
-            """;
 
     private static final String MOVE_PROCESSING_MESSAGE_TO_COMPLETE = """
             with message_to_complete as (
@@ -167,6 +162,7 @@ public class QueueDao {
 
     private static final RowMapper<Boolean> boolMapper = (rs, ignore) -> rs.getBoolean(1);
     private static final RowMapper<String> stringMapper = (rs, ignore) -> rs.getString(1);
+    private static final RowMapper<Void> emptyMapper = (rs, ignore) -> null;
 
     private final JdbcTemplate jdbcTemplate;
     private final TransactionTemplate txTemplate;
@@ -214,7 +210,7 @@ public class QueueDao {
     /**
      * 批量把到时间的不可见消息移入待处理队列,把处理超时任务重新移回待处理队列,并发送通知提醒有可用消息
      */
-    public void schedule() {
+    public void tryHandleTimeoutAndVisibleMessagesThenDispatchAndOptionalSendNotify() {
         try {
             txTemplate.executeWithoutResult(ignore -> {
                 // 尝试获取锁
@@ -231,12 +227,18 @@ public class QueueDao {
                 jdbcTemplate.update(MOVE_TIMEOUT_MESSAGES_TO_PENDING);
 
                 // 查询有可处理消息的topic并发出通知
+                List<String> topics = jdbcTemplate.query(FIND_AVAILABLE_TOPIC, stringMapper);
+                if (topics.isEmpty()) {
+                    return;
+                }
+
+                for (String topic : topics) {
+                    listenerDispatcher.dispatchWithCheckTx(topic);
+                }
+
                 if (isEnablePgNotify) {
-                    jdbcTemplate.update(NOTIFY_AVAILABLE_TOPIC, PgqConstants.TOPIC_CHANNEL);
-                } else {
-                    List<String> topics = jdbcTemplate.query(FIND_AVAILABLE_TOPIC, stringMapper);
                     for (String topic : topics) {
-                        listenerDispatcher.dispatchWithCheckTx(topic);
+                        jdbcTemplate.query("select pg_notify(?, ?)", emptyMapper, PgqConstants.TOPIC_CHANNEL, topic);
                     }
                 }
             });

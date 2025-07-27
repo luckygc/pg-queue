@@ -1,7 +1,7 @@
 package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.ListenerDispatcher;
-import github.luckygc.pgq.PgNotifyListener;
+import github.luckygc.pgq.PgChannelListener;
 import github.luckygc.pgq.PgqConstants;
 import github.luckygc.pgq.QueueDao;
 import github.luckygc.pgq.api.BatchMessageHandler;
@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +32,7 @@ public class QueueManagerImpl implements QueueManager {
 
     private final ListenerDispatcher listenerDispatcher;
     private final boolean isEnablePgNotify;
-    private PgNotifyListener pgNotifyListener;
+    private PgChannelListener pgChannelListener;
     private final QueueDao queueDao;
     private final MessageManager messageManager;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -49,7 +50,7 @@ public class QueueManagerImpl implements QueueManager {
         this.queueDao = new QueueDao(jdbcTemplate, transactionTemplate, listenerDispatcher, true);
         this.messageManager = new MessageManagerImpl(queueDao);
         this.isEnablePgNotify = true;
-        this.pgNotifyListener = new PgNotifyListener(PgqConstants.TOPIC_CHANNEL, jdbcUrl, username, password,
+        this.pgChannelListener = new PgChannelListener(PgqConstants.TOPIC_CHANNEL, jdbcUrl, username, password,
                 listenerDispatcher);
     }
 
@@ -108,11 +109,19 @@ public class QueueManagerImpl implements QueueManager {
 
     @Override
     public void start() throws SQLException {
-        pgNotifyListener.start();
+        if (isEnablePgNotify) {
+            pgChannelListener.startListen();
+        }
+
+        scheduler.scheduleWithFixedDelay(queueDao::tryHandleTimeoutAndVisibleMessagesThenDispatchAndOptionalSendNotify, 0, 10, TimeUnit.SECONDS);
     }
 
     @Override
     public void stop() {
-        pgNotifyListener.stop();
+        if (isEnablePgNotify) {
+            pgChannelListener.stopListen();
+        }
+
+        scheduler.shutdownNow();
     }
 }

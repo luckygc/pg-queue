@@ -14,9 +14,9 @@ import org.postgresql.jdbc.PgConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PgNotifyListener {
+public class PgChannelListener {
 
-    private static final Logger log = LoggerFactory.getLogger(PgNotifyListener.class);
+    private static final Logger log = LoggerFactory.getLogger(PgChannelListener.class);
 
     private static final int LISTEN_CHANNEL_TIMEOUT_MILLIS = Math.toIntExact(TimeUnit.SECONDS.toMillis(20));
     private static final long RECONNECT_RETRY_DELAY_NANOS = TimeUnit.SECONDS.toNanos(10);
@@ -33,7 +33,7 @@ public class PgNotifyListener {
     private final AtomicBoolean runningFlag = new AtomicBoolean(false);
     private volatile @Nullable PgConnection con;
 
-    public PgNotifyListener(String channel, String jdbcUrl, String username, String password,
+    public PgChannelListener(String channel, String jdbcUrl, String username, String password,
             ListenerDispatcher listenerDispatcher) {
         this.channel = Objects.requireNonNull(channel);
         this.jdbcUrl = Objects.requireNonNull(jdbcUrl);
@@ -42,7 +42,7 @@ public class PgNotifyListener {
         this.listenerDispatcher = Objects.requireNonNull(listenerDispatcher);
     }
 
-    public void start() throws SQLException {
+    public void startListen() throws SQLException {
         if (!runningFlag.compareAndSet(false, true)) {
             throw new IllegalStateException("队列正在监听");
         }
@@ -54,7 +54,7 @@ public class PgNotifyListener {
         loopThread.start();
     }
 
-    public void stop() {
+    public void stopListen() {
         if (!runningFlag.compareAndSet(true, false)) {
             throw new IllegalStateException("监听器未在运行");
         }

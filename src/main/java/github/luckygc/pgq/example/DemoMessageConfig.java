@@ -15,14 +15,19 @@ public class DemoMessageConfig {
     void demo() {
 
         QueueManager queueManager = new QueueManagerImpl(
-                "jdbc:postgresql//127.0.0.1:5432/postgres",
-                "",
-                "",
                 new JdbcTemplate(),
                 new TransactionTemplate()
         );
 
-        queueManager.queue("test").push("""
+        QueueManager queueManagerWithEnablePgNotify = new QueueManagerImpl(
+                new JdbcTemplate(),
+                new TransactionTemplate(),
+                "jdbc:postgresql//127.0.0.1:5432/postgres",
+                "",
+                ""
+        );
+
+        queueManagerWithEnablePgNotify.queue("test").push("""
                 {"name" : "xxx"}""");
 
         SingleMessageHandler singleMessageHandler = new SingleMessageHandler() {
@@ -62,12 +67,12 @@ public class DemoMessageConfig {
             }
         };
 
-        queueManager.registerMessageHandler(singleMessageHandler);
+        queueManagerWithEnablePgNotify.registerMessageHandler(singleMessageHandler);
 
-        queueManager.queue("test2").push("sss");
+        queueManagerWithEnablePgNotify.queue("test2").push("sss");
 
         try {
-            queueManager.start();
+            queueManagerWithEnablePgNotify.start();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
