@@ -9,6 +9,10 @@ public interface QueueManager {
 
     void registerListener(QueueListener messageListener);
 
+    void registerMessageHandler(SingleMessageHandler messageHandler);
+
+    void registerMessageHandler(BatchMessageHandler messageHandler);
+
     @Nullable
     QueueListener listener(String topic);
 

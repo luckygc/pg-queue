@@ -1,7 +1,8 @@
 package github.luckygc.pgq.impl;
 
+import github.luckygc.pgq.api.DatabaseQueue;
+import github.luckygc.pgq.api.MessageManager;
 import github.luckygc.pgq.api.QueueListener;
-import github.luckygc.pgq.api.QueueManager;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
 import org.slf4j.Logger;
@@ -11,11 +12,13 @@ public abstract class AbstractMessagesProcessor implements QueueListener {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractMessagesProcessor.class);
 
-    protected final QueueManager queueManager;
+    protected final DatabaseQueue queue;
+    protected final MessageManager messageManager;
     protected final Semaphore semaphore;
 
-    public AbstractMessagesProcessor(QueueManager queueManager, Semaphore semaphore) {
-        this.queueManager = Objects.requireNonNull(queueManager);
+    public AbstractMessagesProcessor(DatabaseQueue queue, MessageManager messageManager, Semaphore semaphore) {
+        this.queue = Objects.requireNonNull(queue);
+        this.messageManager = Objects.requireNonNull(messageManager);
         this.semaphore = Objects.requireNonNull(semaphore);
         if (semaphore.availablePermits() < 1) {
             throw new IllegalArgumentException("线程数必须大于0");

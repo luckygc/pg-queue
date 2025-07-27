@@ -3,21 +3,22 @@ package github.luckygc.pgq.impl;
 import github.luckygc.pgq.Message;
 import github.luckygc.pgq.api.BatchMessageHandler;
 import github.luckygc.pgq.api.DatabaseQueue;
-import github.luckygc.pgq.api.QueueManager;
+import github.luckygc.pgq.api.MessageManager;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BatchMessageQueueListener extends AbstractMessagesProcessor {
+public class BatchMessageProcessor extends AbstractMessagesProcessor {
 
-    private static final Logger log = LoggerFactory.getLogger(BatchMessageQueueListener.class);
+    private static final Logger log = LoggerFactory.getLogger(BatchMessageProcessor.class);
 
     private final BatchMessageHandler messageHandler;
 
-    public BatchMessageQueueListener(QueueManager queueManager, BatchMessageHandler messageHandler) {
-        super(queueManager, new Semaphore(messageHandler.threadCount()));
+    public BatchMessageProcessor(DatabaseQueue queue, MessageManager messageManager,
+            BatchMessageHandler messageHandler) {
+        super(queue, messageManager, new Semaphore(messageHandler.threadCount()));
         this.messageHandler = Objects.requireNonNull(messageHandler);
     }
 
@@ -29,7 +30,6 @@ public class BatchMessageQueueListener extends AbstractMessagesProcessor {
     @Override
     public void processMessages() {
         try {
-            DatabaseQueue queue = queueManager.queue(messageHandler.topic());
             List<Message> messages;
             while (!(messages = queue.pull(messageHandler.pullCount())).isEmpty()) {
                 try {

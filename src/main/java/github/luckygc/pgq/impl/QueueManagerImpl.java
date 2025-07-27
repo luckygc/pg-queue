@@ -2,11 +2,13 @@ package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.PgqConstants;
 import github.luckygc.pgq.QueueDao;
+import github.luckygc.pgq.api.BatchMessageHandler;
 import github.luckygc.pgq.api.DatabaseQueue;
 import github.luckygc.pgq.api.DeadMessageManger;
 import github.luckygc.pgq.api.MessageManager;
 import github.luckygc.pgq.api.QueueListener;
 import github.luckygc.pgq.api.QueueManager;
+import github.luckygc.pgq.api.SingleMessageHandler;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -75,6 +77,20 @@ public class QueueManagerImpl implements QueueManager {
         if (queueListener != null) {
             throw new IllegalStateException("当前已存在topic[{}]的监听器");
         }
+    }
+
+    @Override
+    public void registerMessageHandler(SingleMessageHandler messageHandler) {
+        DatabaseQueue queue = queue(messageHandler.topic());
+        SingleMessageProcessor processor = new SingleMessageProcessor(queue, messageManager, messageHandler);
+        registerListener(processor);
+    }
+
+    @Override
+    public void registerMessageHandler(BatchMessageHandler messageHandler) {
+        DatabaseQueue queue = queue(messageHandler.topic());
+        BatchMessageProcessor processor = new BatchMessageProcessor(queue, messageManager, messageHandler);
+        registerListener(processor);
     }
 
     @Override

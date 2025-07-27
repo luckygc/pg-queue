@@ -2,6 +2,7 @@ package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.Message;
 import github.luckygc.pgq.api.DatabaseQueue;
+import github.luckygc.pgq.api.MessageManager;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import java.util.List;
@@ -16,8 +17,8 @@ public class SingleMessageProcessor extends AbstractMessagesProcessor {
 
     private final SingleMessageHandler messageHandler;
 
-    public SingleMessageProcessor(QueueManager queueManager, SingleMessageHandler messageHandler) {
-        super(queueManager, new Semaphore(messageHandler.threadCount()));
+    public SingleMessageProcessor(DatabaseQueue queue, MessageManager messageManager, SingleMessageHandler messageHandler) {
+        super(queue, messageManager,new Semaphore(messageHandler.threadCount()));
         this.messageHandler = Objects.requireNonNull(messageHandler);
     }
 
@@ -29,7 +30,6 @@ public class SingleMessageProcessor extends AbstractMessagesProcessor {
     @Override
     public void processMessages() {
         try {
-            DatabaseQueue queue = queueManager.queue(messageHandler.topic());
             List<Message> messages;
             while (!(messages = queue.pull(messageHandler.pullCount())).isEmpty()) {
                 for (Message message : messages) {
