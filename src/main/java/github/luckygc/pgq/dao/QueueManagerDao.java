@@ -1,5 +1,6 @@
-package github.luckygc.pgq;
+package github.luckygc.pgq.dao;
 
+import github.luckygc.pgq.PgqConstants;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;

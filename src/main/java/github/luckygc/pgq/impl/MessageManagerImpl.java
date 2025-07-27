@@ -1,7 +1,7 @@
 package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.model.Message;
-import github.luckygc.pgq.MessageDao;
+import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.api.MessageManager;
 import java.time.Duration;
 import java.util.List;

@@ -1,10 +1,10 @@
 package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.ListenerDispatcher;
+import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.PgChannelListener;
 import github.luckygc.pgq.PgqConstants;
-import github.luckygc.pgq.MessageDao;
-import github.luckygc.pgq.QueueManagerDao;
+import github.luckygc.pgq.dao.QueueManagerDao;
 import github.luckygc.pgq.api.BatchMessageHandler;
 import github.luckygc.pgq.api.DatabaseQueue;
 import github.luckygc.pgq.api.DeadMessageManger;
@@ -41,24 +41,24 @@ public class QueueManagerImpl implements QueueManager {
     private PgChannelListener pgChannelListener;
 
     public QueueManagerImpl(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
-        this.enablePgNotify = false;
         this.listenerDispatcher = new ListenerDispatcher();
         this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
         this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
         this.messageManager = new MessageManagerImpl(messageDao);
         this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
+        this.enablePgNotify = false;
     }
 
     public QueueManagerImpl(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate, String jdbcUrl,
             String username, String password) {
-        this.enablePgNotify = true;
         this.listenerDispatcher = new ListenerDispatcher();
         this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
         this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
         this.messageManager = new MessageManagerImpl(messageDao);
+        this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
+        this.enablePgNotify = true;
         this.pgChannelListener = new PgChannelListener(PgqConstants.TOPIC_CHANNEL, Objects.requireNonNull(jdbcUrl),
                 Objects.requireNonNull(username), password, listenerDispatcher);
-        this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
     }
 
     @Override

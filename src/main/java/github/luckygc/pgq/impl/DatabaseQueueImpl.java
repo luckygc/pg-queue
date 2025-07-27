@@ -2,7 +2,7 @@ package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.ListenerDispatcher;
 import github.luckygc.pgq.PgqConstants;
-import github.luckygc.pgq.MessageDao;
+import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.api.DatabaseQueue;
 import github.luckygc.pgq.model.Message;
 import java.time.Duration;

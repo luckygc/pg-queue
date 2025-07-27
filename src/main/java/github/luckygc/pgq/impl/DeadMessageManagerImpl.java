@@ -1,6 +1,6 @@
 package github.luckygc.pgq.impl;
 
-import github.luckygc.pgq.MessageDao;
+import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.api.DeadMessageManger;
 
 public class DeadMessageManagerImpl implements DeadMessageManger {

@@ -1,5 +1,6 @@
-package github.luckygc.pgq;
+package github.luckygc.pgq.dao;
 
+import github.luckygc.pgq.Utils;
 import github.luckygc.pgq.model.Message;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
