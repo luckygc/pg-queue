@@ -16,7 +16,8 @@ public abstract class AbstractMessagesProcessor implements QueueListener {
     protected final ProcessingMessageManager processingMessageManager;
     protected final Semaphore semaphore;
 
-    public AbstractMessagesProcessor(DatabaseQueue queue, ProcessingMessageManager processingMessageManager, Semaphore semaphore) {
+    public AbstractMessagesProcessor(DatabaseQueue queue, ProcessingMessageManager processingMessageManager,
+            Semaphore semaphore) {
         this.queue = Objects.requireNonNull(queue);
         this.processingMessageManager = Objects.requireNonNull(processingMessageManager);
         this.semaphore = Objects.requireNonNull(semaphore);

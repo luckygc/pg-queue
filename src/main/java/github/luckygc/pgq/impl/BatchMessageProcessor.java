@@ -1,9 +1,9 @@
 package github.luckygc.pgq.impl;
 
-import github.luckygc.pgq.model.Message;
 import github.luckygc.pgq.api.BatchMessageHandler;
 import github.luckygc.pgq.api.DatabaseQueue;
 import github.luckygc.pgq.api.ProcessingMessageManager;
+import github.luckygc.pgq.model.Message;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
