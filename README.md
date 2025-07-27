@@ -93,7 +93,7 @@ SingleMessageHandler handler = new SingleMessageHandler() {
 queueManager.registerMessageHandler(handler);
 
 // 启动队列管理器
-queueManager.start(10); // 10秒轮询间隔
+queueManager.start();
 ```
 也可以手动pull消息然后处理
 
