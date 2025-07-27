@@ -35,7 +35,7 @@ public class QueueManagerImpl implements QueueManager {
     private PgChannelListener pgChannelListener;
     private final QueueDao queueDao;
     private final MessageManager messageManager;
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService scheduler;
 
     public QueueManagerImpl(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
         this.listenerDispatcher = new ListenerDispatcher(this);
@@ -113,6 +113,7 @@ public class QueueManagerImpl implements QueueManager {
             pgChannelListener.startListen();
         }
 
+        scheduler = Executors.newSingleThreadScheduledExecutor();
         scheduler.scheduleWithFixedDelay(queueDao::tryHandleTimeoutAndVisibleMessagesThenDispatchAndOptionalSendNotify,
                 0, loopIntervalSeconds, TimeUnit.SECONDS);
     }
@@ -124,5 +125,6 @@ public class QueueManagerImpl implements QueueManager {
         }
 
         scheduler.shutdownNow();
+        scheduler = null;
     }
 }

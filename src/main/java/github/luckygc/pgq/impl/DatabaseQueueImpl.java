@@ -33,7 +33,6 @@ public class DatabaseQueueImpl implements DatabaseQueue {
     public void push(String message, Duration processDelay) {
         Message messageObj = Message.of(topic, message, PgqConstants.MESSAGE_PRIORITY);
         queueDao.insertProcessLaterMessage(messageObj, processDelay);
-        listenerDispatcher.dispatchWithCheckTx(topic);
     }
 
     @Override
@@ -47,7 +46,6 @@ public class DatabaseQueueImpl implements DatabaseQueue {
     public void push(String message, Duration processDelay, int priority) {
         Message messageObj = Message.of(topic, message, priority);
         queueDao.insertProcessLaterMessage(messageObj, processDelay);
-        listenerDispatcher.dispatchWithCheckTx(topic);
     }
 
     @Override
@@ -75,7 +73,6 @@ public class DatabaseQueueImpl implements DatabaseQueue {
     public void push(List<String> messages, Duration processDelay, int priority) {
         List<Message> messageObjs = Message.of(topic, messages, priority);
         queueDao.insertProcessLaterMessages(messageObjs, processDelay);
-        listenerDispatcher.dispatchWithCheckTx(topic);
     }
 
     @Override
