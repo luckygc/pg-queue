@@ -4,6 +4,7 @@ import github.luckygc.pgq.PgqConstants;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -49,7 +50,7 @@ public class QueueManagerDao {
     /**
      * 批量把到时间的不可见消息移入待处理队列,把处理超时任务重新移回待处理队列,并返回有可用消息的topic集合
      */
-    public List<String> tryHandleTimeoutAndVisibleMessagesAndReturnTopicsWithAvailableMessages(boolean sendNotify) {
+    public List<String> tryHandleTimeoutAndVisibleMessagesAndReturnTopicsWithAvailableMessages() {
         List<String> finalTopics = null;
 
         try {
@@ -68,18 +69,7 @@ public class QueueManagerDao {
                 jdbcTemplate.update(MOVE_TIMEOUT_MESSAGES_TO_PENDING);
 
                 // 查询有可处理消息的topic并发出通知
-                List<String> topics = jdbcTemplate.query(FIND_AVAILABLE_TOPIC, stringMapper);
-                if (topics.isEmpty()) {
-                    return topics;
-                }
-
-                if (sendNotify) {
-                    for (String topic : topics) {
-                        jdbcTemplate.query("select pg_notify(?, ?)", emptyMapper, PgqConstants.TOPIC_CHANNEL, topic);
-                    }
-                }
-
-                return topics;
+                return jdbcTemplate.query(FIND_AVAILABLE_TOPIC, stringMapper);
             });
         } catch (Throwable t) {
             log.error("调度失败", t);
@@ -90,5 +80,10 @@ public class QueueManagerDao {
         }
 
         return finalTopics;
+    }
+
+    public void sendNotify(String topic) {
+        Objects.requireNonNull(topic);
+        jdbcTemplate.query("select pg_notify(?, ?)", emptyMapper, PgqConstants.TOPIC_CHANNEL, topic);
     }
 }

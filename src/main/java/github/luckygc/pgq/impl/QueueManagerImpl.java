@@ -71,6 +71,10 @@ public class QueueManagerImpl implements QueueManager {
                 return v;
             }
 
+            if (enablePgNotify) {
+                return new DatabaseQueueImpl(databaseQueueDao, k, listenerDispatcher, queueManagerDao);
+            }
+
             return new DatabaseQueueImpl(databaseQueueDao, k, listenerDispatcher);
         });
     }
@@ -121,14 +125,16 @@ public class QueueManagerImpl implements QueueManager {
     }
 
     private void schedule() {
-        List<String> topics = queueManagerDao.tryHandleTimeoutAndVisibleMessagesAndReturnTopicsWithAvailableMessages(
-                enablePgNotify);
+        List<String> topics = queueManagerDao.tryHandleTimeoutAndVisibleMessagesAndReturnTopicsWithAvailableMessages();
         if (topics.isEmpty()) {
             return;
         }
 
         for (String topic : topics) {
             listenerDispatcher.dispatch(topic);
+            if (enablePgNotify) {
+                queueManagerDao.sendNotify(topic);
+            }
         }
     }
 

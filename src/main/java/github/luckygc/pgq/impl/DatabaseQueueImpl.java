@@ -4,6 +4,7 @@ import github.luckygc.pgq.ListenerDispatcher;
 import github.luckygc.pgq.PgqConstants;
 import github.luckygc.pgq.api.DatabaseQueue;
 import github.luckygc.pgq.dao.DatabaseQueueDao;
+import github.luckygc.pgq.dao.QueueManagerDao;
 import github.luckygc.pgq.model.Message;
 import java.time.Duration;
 import java.util.List;
@@ -15,18 +16,30 @@ public class DatabaseQueueImpl implements DatabaseQueue {
     private final ListenerDispatcher listenerDispatcher;
     private final DatabaseQueueDao databaseQueueDao;
     private final String topic;
+    private final boolean enablePgNotify;
+    private QueueManagerDao queueManagerDao;
 
     public DatabaseQueueImpl(DatabaseQueueDao databaseQueueDao, String topic, ListenerDispatcher listenerDispatcher) {
         this.databaseQueueDao = Objects.requireNonNull(databaseQueueDao);
         this.topic = Objects.requireNonNull(topic);
         this.listenerDispatcher = Objects.requireNonNull(listenerDispatcher);
+        this.enablePgNotify = false;
+    }
+
+    public DatabaseQueueImpl(DatabaseQueueDao databaseQueueDao, String topic, ListenerDispatcher listenerDispatcher,
+            QueueManagerDao queueManagerDao) {
+        this.databaseQueueDao = Objects.requireNonNull(databaseQueueDao);
+        this.topic = Objects.requireNonNull(topic);
+        this.listenerDispatcher = Objects.requireNonNull(listenerDispatcher);
+        this.enablePgNotify = true;
+        this.queueManagerDao = Objects.requireNonNull(queueManagerDao);
     }
 
     @Override
     public void push(String message) {
         Message messageObj = Message.of(topic, message, PgqConstants.MESSAGE_PRIORITY);
         databaseQueueDao.insertMessage(messageObj);
-        listenerDispatcher.dispatchWithCheckTx(topic);
+        dispatchAndSendNotify();
     }
 
     @Override
@@ -39,7 +52,7 @@ public class DatabaseQueueImpl implements DatabaseQueue {
     public void push(String message, int priority) {
         Message messageObj = Message.of(topic, message, priority);
         databaseQueueDao.insertMessage(messageObj);
-        listenerDispatcher.dispatchWithCheckTx(topic);
+        dispatchAndSendNotify();
     }
 
     @Override
@@ -52,7 +65,7 @@ public class DatabaseQueueImpl implements DatabaseQueue {
     public void push(List<String> messages) {
         List<Message> messageObjs = Message.of(topic, messages, PgqConstants.MESSAGE_PRIORITY);
         databaseQueueDao.insertMessages(messageObjs);
-        listenerDispatcher.dispatchWithCheckTx(topic);
+        dispatchAndSendNotify();
     }
 
     @Override
@@ -65,13 +78,20 @@ public class DatabaseQueueImpl implements DatabaseQueue {
     public void push(List<String> messages, int priority) {
         List<Message> messageObjs = Message.of(topic, messages, priority);
         databaseQueueDao.insertMessages(messageObjs);
-        listenerDispatcher.dispatchWithCheckTx(topic);
+        dispatchAndSendNotify();
     }
 
     @Override
     public void push(List<String> messages, Duration processDelay, int priority) {
         List<Message> messageObjs = Message.of(topic, messages, priority);
         databaseQueueDao.insertProcessLaterMessages(messageObjs, processDelay);
+    }
+
+    private void dispatchAndSendNotify() {
+        listenerDispatcher.dispatchWithCheckTx(topic);
+        if (enablePgNotify) {
+            queueManagerDao.sendNotify(topic);
+        }
     }
 
     @Override
