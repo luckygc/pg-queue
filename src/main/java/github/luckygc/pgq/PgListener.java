@@ -49,10 +49,11 @@ public class PgListener {
             throw new IllegalStateException("队列正在监听");
         }
 
-        connect();
-        Thread listenerThread = new Thread(this::listenChannel, "pgq-channel-listener");
-        listenerThread.setDaemon(true);
-        listenerThread.start();
+        connectAndStartListenChannel();
+
+        Thread loopThread = new Thread(this::listenChannel, "pgq-channel-listener");
+        loopThread.setDaemon(true);
+        loopThread.start();
     }
 
     public void stop() {
@@ -87,15 +88,15 @@ public class PgListener {
         closeConnectionQuietly();
     }
 
-    private void connect() throws SQLException {
+    private void connectAndStartListenChannel() throws SQLException {
         Connection raw = DriverManager.getConnection(jdbcUrl, username, password);
         con = raw.unwrap(PgConnection.class);
 
         try (Statement statement = Objects.requireNonNull(con).createStatement()) {
-            statement.execute("LISTEN %s".formatted(PgqConstants.TOPIC_CHANNEL));
+            statement.execute("LISTEN %s".formatted(channel));
         }
 
-        log.debug("已建立连接,正在监听通道: {}", PgqConstants.TOPIC_CHANNEL);
+        log.debug("已建立连接,正在监听通道: {}", channel);
     }
 
     private void reconnect() {
@@ -104,7 +105,7 @@ public class PgListener {
         while (runningFlag.get()) {
             try {
                 log.debug("尝试重新监听, 次数:{}", attempt);
-                connect();
+                connectAndStartListenChannel();
                 break;
             } catch (SQLException e) {
                 log.error("尝试重新监听失败", e);
