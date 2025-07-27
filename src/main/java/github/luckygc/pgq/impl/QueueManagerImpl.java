@@ -34,7 +34,6 @@ public class QueueManagerImpl implements QueueManager {
     private final ListenerDispatcher listenerDispatcher;
     private final QueueManagerDao queueManagerDao;
     private final DatabaseQueueDao databaseQueueDao;
-    private final MessageDao messageDao;
     private final MessageManager messageManager;
     private final DeadMessageManger deadMessageManger;
     private ScheduledExecutorService scheduler;
@@ -46,7 +45,7 @@ public class QueueManagerImpl implements QueueManager {
         this.listenerDispatcher = new ListenerDispatcher();
         this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
         this.databaseQueueDao = new DatabaseQueueDao(jdbcTemplate, transactionTemplate);
-        this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
+        MessageDao messageDao = new MessageDao(jdbcTemplate);
         this.messageManager = new MessageManagerImpl(messageDao);
         this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
         this.enablePgNotify = false;
@@ -57,7 +56,7 @@ public class QueueManagerImpl implements QueueManager {
         this.listenerDispatcher = new ListenerDispatcher();
         this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
         this.databaseQueueDao = new DatabaseQueueDao(jdbcTemplate, transactionTemplate);
-        this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
+        MessageDao messageDao = new MessageDao(jdbcTemplate);
         this.messageManager = new MessageManagerImpl(messageDao);
         this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
         this.enablePgNotify = true;

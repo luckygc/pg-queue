@@ -9,15 +9,10 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.support.TransactionTemplate;
 
 public class MessageDao {
 
     private static final Logger log = LoggerFactory.getLogger(MessageDao.class);
-
-    // 插入
-
-
 
     private static final String MOVE_PROCESSING_MESSAGE_TO_COMPLETE = """
             with message_to_complete as (
@@ -103,14 +98,10 @@ public class MessageDao {
             """;
 
     private final JdbcTemplate jdbcTemplate;
-    private final TransactionTemplate txTemplate;
 
-    public MessageDao(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
+    public MessageDao(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
-        this.txTemplate = Objects.requireNonNull(transactionTemplate);
     }
-
-
 
     public void deleteProcessingMessage(Message message) {
         Objects.requireNonNull(message);
@@ -182,6 +173,4 @@ public class MessageDao {
         jdbcTemplate.update(BATCH_MOVE_PROCESSING_MESSAGES_TO_INVISIBLE, idArray,
                 LocalDateTime.now().plus(processDelay));
     }
-
-
 }
