@@ -13,11 +13,11 @@ public class DeadMessageManagerImpl implements DeadMessageManger {
 
     @Override
     public void retry(String topic) {
-
+        throw new UnsupportedOperationException("暂未实现");
     }
 
     @Override
     public void delete(String topic) {
-
+        throw new UnsupportedOperationException("暂未实现");
     }
 }
