@@ -15,5 +15,5 @@ public interface SingleMessageHandler {
 
     String topic();
 
-    void handle(MessageManager messageManager, Message message);
+    void handle(ProcessingMessageManager processingMessageManager, Message message);
 }

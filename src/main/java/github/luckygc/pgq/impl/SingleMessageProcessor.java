@@ -2,7 +2,7 @@ package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.model.Message;
 import github.luckygc.pgq.api.DatabaseQueue;
-import github.luckygc.pgq.api.MessageManager;
+import github.luckygc.pgq.api.ProcessingMessageManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import java.util.List;
 import java.util.Objects;
@@ -16,9 +16,9 @@ public class SingleMessageProcessor extends AbstractMessagesProcessor {
 
     private final SingleMessageHandler messageHandler;
 
-    public SingleMessageProcessor(DatabaseQueue queue, MessageManager messageManager,
+    public SingleMessageProcessor(DatabaseQueue queue, ProcessingMessageManager processingMessageManager,
             SingleMessageHandler messageHandler) {
-        super(queue, messageManager, new Semaphore(messageHandler.threadCount()));
+        super(queue, processingMessageManager, new Semaphore(messageHandler.threadCount()));
         this.messageHandler = Objects.requireNonNull(messageHandler);
     }
 
@@ -34,7 +34,7 @@ public class SingleMessageProcessor extends AbstractMessagesProcessor {
             while (!(messages = queue.pull(messageHandler.pullCount())).isEmpty()) {
                 for (Message message : messages) {
                     try {
-                        messageHandler.handle(messageManager, message);
+                        messageHandler.handle(processingMessageManager, message);
                     } catch (Throwable t) {
                         log.error("处理消息失败", t);
                     }

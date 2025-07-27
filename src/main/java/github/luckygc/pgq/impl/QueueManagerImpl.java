@@ -6,7 +6,7 @@ import github.luckygc.pgq.PgqConstants;
 import github.luckygc.pgq.api.BatchMessageHandler;
 import github.luckygc.pgq.api.DatabaseQueue;
 import github.luckygc.pgq.api.DeadMessageManger;
-import github.luckygc.pgq.api.MessageManager;
+import github.luckygc.pgq.api.ProcessingMessageManager;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import github.luckygc.pgq.dao.DatabaseQueueDao;
@@ -34,7 +34,7 @@ public class QueueManagerImpl implements QueueManager {
     private final ListenerDispatcher listenerDispatcher;
     private final QueueManagerDao queueManagerDao;
     private final DatabaseQueueDao databaseQueueDao;
-    private final MessageManager messageManager;
+    private final ProcessingMessageManager processingMessageManager;
     private final DeadMessageManger deadMessageManger;
     private ScheduledExecutorService scheduler;
 
@@ -46,7 +46,7 @@ public class QueueManagerImpl implements QueueManager {
         this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
         this.databaseQueueDao = new DatabaseQueueDao(jdbcTemplate, transactionTemplate);
         MessageDao messageDao = new MessageDao(jdbcTemplate);
-        this.messageManager = new MessageManagerImpl(messageDao);
+        this.processingMessageManager = new ProcessingMessageManagerImpl(messageDao);
         this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
         this.enablePgNotify = false;
     }
@@ -57,7 +57,7 @@ public class QueueManagerImpl implements QueueManager {
         this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
         this.databaseQueueDao = new DatabaseQueueDao(jdbcTemplate, transactionTemplate);
         MessageDao messageDao = new MessageDao(jdbcTemplate);
-        this.messageManager = new MessageManagerImpl(messageDao);
+        this.processingMessageManager = new ProcessingMessageManagerImpl(messageDao);
         this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
         this.enablePgNotify = true;
         this.pgChannelListener = new PgChannelListener(PgqConstants.TOPIC_CHANNEL, Objects.requireNonNull(jdbcUrl),
@@ -78,20 +78,20 @@ public class QueueManagerImpl implements QueueManager {
     @Override
     public void registerMessageHandler(SingleMessageHandler messageHandler) {
         DatabaseQueue queue = queue(messageHandler.topic());
-        SingleMessageProcessor processor = new SingleMessageProcessor(queue, messageManager, messageHandler);
+        SingleMessageProcessor processor = new SingleMessageProcessor(queue, processingMessageManager, messageHandler);
         listenerDispatcher.registerListener(processor);
     }
 
     @Override
     public void registerMessageHandler(BatchMessageHandler messageHandler) {
         DatabaseQueue queue = queue(messageHandler.topic());
-        BatchMessageProcessor processor = new BatchMessageProcessor(queue, messageManager, messageHandler);
+        BatchMessageProcessor processor = new BatchMessageProcessor(queue, processingMessageManager, messageHandler);
         listenerDispatcher.registerListener(processor);
     }
 
     @Override
-    public MessageManager messageManager() {
-        return messageManager;
+    public ProcessingMessageManager processingMessageManager() {
+        return processingMessageManager;
     }
 
     @Override

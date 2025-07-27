@@ -6,7 +6,7 @@ public interface QueueManager {
 
     DatabaseQueue queue(String topic);
 
-    MessageManager messageManager();
+    ProcessingMessageManager processingMessageManager();
 
     DeadMessageManger deadMessageManager();
 

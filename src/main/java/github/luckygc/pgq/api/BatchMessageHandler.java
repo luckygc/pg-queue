@@ -16,5 +16,5 @@ public interface BatchMessageHandler {
 
     String topic();
 
-    void handle(MessageManager messageManager, List<Message> messages);
+    void handle(ProcessingMessageManager processingMessageManager, List<Message> messages);
 }

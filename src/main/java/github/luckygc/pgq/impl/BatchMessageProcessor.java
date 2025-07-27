@@ -3,7 +3,7 @@ package github.luckygc.pgq.impl;
 import github.luckygc.pgq.model.Message;
 import github.luckygc.pgq.api.BatchMessageHandler;
 import github.luckygc.pgq.api.DatabaseQueue;
-import github.luckygc.pgq.api.MessageManager;
+import github.luckygc.pgq.api.ProcessingMessageManager;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
@@ -16,9 +16,9 @@ public class BatchMessageProcessor extends AbstractMessagesProcessor {
 
     private final BatchMessageHandler messageHandler;
 
-    public BatchMessageProcessor(DatabaseQueue queue, MessageManager messageManager,
+    public BatchMessageProcessor(DatabaseQueue queue, ProcessingMessageManager processingMessageManager,
             BatchMessageHandler messageHandler) {
-        super(queue, messageManager, new Semaphore(messageHandler.threadCount()));
+        super(queue, processingMessageManager, new Semaphore(messageHandler.threadCount()));
         this.messageHandler = Objects.requireNonNull(messageHandler);
     }
 
@@ -33,7 +33,7 @@ public class BatchMessageProcessor extends AbstractMessagesProcessor {
             List<Message> messages;
             while (!(messages = queue.pull(messageHandler.pullCount())).isEmpty()) {
                 try {
-                    messageHandler.handle(messageManager, messages);
+                    messageHandler.handle(processingMessageManager, messages);
                 } catch (Throwable t) {
                     log.error("处理消息失败", t);
                 }

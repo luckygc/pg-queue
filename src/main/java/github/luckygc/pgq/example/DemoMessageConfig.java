@@ -1,6 +1,6 @@
 package github.luckygc.pgq.example;
 
-import github.luckygc.pgq.api.MessageManager;
+import github.luckygc.pgq.api.ProcessingMessageManager;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import github.luckygc.pgq.impl.QueueManagerImpl;
@@ -43,7 +43,7 @@ public class DemoMessageConfig {
             }
 
             @Override
-            public void handle(MessageManager messageManager, Message message) {
+            public void handle(ProcessingMessageManager messageManager, Message message) {
                 if (message.getPayload() == null) {
                     messageManager.delete(message);
                     return;
