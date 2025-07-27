@@ -2,10 +2,9 @@ package github.luckygc.pgq.example;
 
 import github.luckygc.pgq.Message;
 import github.luckygc.pgq.api.MessageManager;
-import github.luckygc.pgq.api.PgqManager;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
-import github.luckygc.pgq.impl.PgqManagerImpl;
+import github.luckygc.pgq.impl.QueueManagerImpl;
 import java.time.Duration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -14,7 +13,7 @@ public class DemoMessageConfig {
 
     void demo() {
 
-        PgqManager pgqManager = new PgqManagerImpl(
+        QueueManager queueManager = new QueueManagerImpl(
                 "jdbc:postgresql//127.0.0.1:5432/postgres",
                 "",
                 "",
@@ -22,14 +21,12 @@ public class DemoMessageConfig {
                 new TransactionTemplate()
         );
 
-        QueueManager testQueueManager = pgqManager.registerListener("test");
-        testQueueManager.queue().push("""
+        queueManager.queue("test").push("""
                 {"name" : "xxx"}""");
-        testQueueManager.queue();
 
         String test2 = "test2";
 
-        QueueManager testQueue2 = pgqManager.registerListener("test2", new SingleMessageHandler() {
+        QueueManager testQueue2 = queueManager.registerListener(new SingleMessageHandler() {
 
 
             @Override

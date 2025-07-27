@@ -1,11 +1,11 @@
 package github.luckygc.pgq.config;
 
-import github.luckygc.pgq.api.PgqManager;
+import github.luckygc.pgq.api.QueueManager;
 import org.junit.jupiter.api.Test;
 
 public class PushDslTest {
 
-    PgqManager pgqManager;
+    QueueManager queueManager;
 
     @Test
     void test() {
