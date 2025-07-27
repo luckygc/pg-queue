@@ -108,12 +108,13 @@ public class QueueManagerImpl implements QueueManager {
     }
 
     @Override
-    public void start() throws SQLException {
+    public void start(long loopIntervalSeconds) throws SQLException {
         if (isEnablePgNotify) {
             pgChannelListener.startListen();
         }
 
-        scheduler.scheduleWithFixedDelay(queueDao::tryHandleTimeoutAndVisibleMessagesThenDispatchAndOptionalSendNotify, 0, 10, TimeUnit.SECONDS);
+        scheduler.scheduleWithFixedDelay(queueDao::tryHandleTimeoutAndVisibleMessagesThenDispatchAndOptionalSendNotify,
+                0, loopIntervalSeconds, TimeUnit.SECONDS);
     }
 
     @Override

@@ -22,7 +22,12 @@ public interface QueueManager {
 
     void registerMessageHandler(BatchMessageHandler messageHandler);
 
-    void start() throws SQLException;
+    /**
+     * 启动
+     *
+     * @param loopIntervalSeconds 轮询间隔时间，单位秒，用于处理延时处理消息和处理超时消息
+     */
+    void start(long loopIntervalSeconds) throws SQLException;
 
     void stop();
 }
