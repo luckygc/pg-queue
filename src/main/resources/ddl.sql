@@ -70,3 +70,5 @@ create table pgq_dead_queue
     attempt     int                      not null,
     dead_time   timestamp                not null
 );
+
+create index idx_pgq_dead_queue_topic on pgq_dead_queue (topic);
