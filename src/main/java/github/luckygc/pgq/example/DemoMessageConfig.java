@@ -1,10 +1,11 @@
 package github.luckygc.pgq.example;
 
-import github.luckygc.pgq.model.Message;
 import github.luckygc.pgq.api.MessageManager;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import github.luckygc.pgq.impl.QueueManagerImpl;
+import github.luckygc.pgq.model.Message;
+import java.sql.SQLException;
 import java.time.Duration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -60,5 +61,15 @@ public class DemoMessageConfig {
                 // messageManager.complete(message);
             }
         };
+
+        queueManager.registerMessageHandler(singleMessageHandler);
+
+        queueManager.queue("test2").push("sss");
+
+        try {
+            queueManager.startListen();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
