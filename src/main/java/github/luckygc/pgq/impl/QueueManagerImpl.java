@@ -1,16 +1,17 @@
 package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.ListenerDispatcher;
-import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.PgChannelListener;
 import github.luckygc.pgq.PgqConstants;
-import github.luckygc.pgq.dao.QueueManagerDao;
 import github.luckygc.pgq.api.BatchMessageHandler;
 import github.luckygc.pgq.api.DatabaseQueue;
 import github.luckygc.pgq.api.DeadMessageManger;
 import github.luckygc.pgq.api.MessageManager;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
+import github.luckygc.pgq.dao.DatabaseQueueDao;
+import github.luckygc.pgq.dao.MessageDao;
+import github.luckygc.pgq.dao.QueueManagerDao;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ public class QueueManagerImpl implements QueueManager {
 
     private final ListenerDispatcher listenerDispatcher;
     private final QueueManagerDao queueManagerDao;
+    private final DatabaseQueueDao databaseQueueDao;
     private final MessageDao messageDao;
     private final MessageManager messageManager;
     private final DeadMessageManger deadMessageManger;
@@ -43,6 +45,7 @@ public class QueueManagerImpl implements QueueManager {
     public QueueManagerImpl(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
         this.listenerDispatcher = new ListenerDispatcher();
         this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
+        this.databaseQueueDao = new DatabaseQueueDao(jdbcTemplate, transactionTemplate);
         this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
         this.messageManager = new MessageManagerImpl(messageDao);
         this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
@@ -53,6 +56,7 @@ public class QueueManagerImpl implements QueueManager {
             String username, String password) {
         this.listenerDispatcher = new ListenerDispatcher();
         this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
+        this.databaseQueueDao = new DatabaseQueueDao(jdbcTemplate, transactionTemplate);
         this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
         this.messageManager = new MessageManagerImpl(messageDao);
         this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
@@ -68,7 +72,7 @@ public class QueueManagerImpl implements QueueManager {
                 return v;
             }
 
-            return new DatabaseQueueImpl(messageDao, k, listenerDispatcher);
+            return new DatabaseQueueImpl(databaseQueueDao, k, listenerDispatcher);
         });
     }
 
