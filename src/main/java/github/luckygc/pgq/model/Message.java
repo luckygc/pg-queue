@@ -1,4 +1,4 @@
-package github.luckygc.pgq;
+package github.luckygc.pgq.model;
 
 import java.time.LocalDateTime;
 import org.jspecify.annotations.Nullable;

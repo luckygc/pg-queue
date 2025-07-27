@@ -1,6 +1,6 @@
 package github.luckygc.pgq.impl;
 
-import github.luckygc.pgq.Message;
+import github.luckygc.pgq.model.Message;
 import github.luckygc.pgq.PgqConstants;
 import github.luckygc.pgq.QueueDao;
 import github.luckygc.pgq.Utils;

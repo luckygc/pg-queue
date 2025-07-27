@@ -1,5 +1,6 @@
 package github.luckygc.pgq;
 
+import github.luckygc.pgq.model.Message;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;

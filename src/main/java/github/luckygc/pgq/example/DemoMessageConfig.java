@@ -1,11 +1,10 @@
 package github.luckygc.pgq.example;
 
-import github.luckygc.pgq.Message;
+import github.luckygc.pgq.model.Message;
 import github.luckygc.pgq.api.MessageManager;
 import github.luckygc.pgq.api.QueueManager;
 import github.luckygc.pgq.api.SingleMessageHandler;
 import github.luckygc.pgq.impl.QueueManagerImpl;
-import github.luckygc.pgq.impl.SingleMessageProcessor;
 import java.time.Duration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;

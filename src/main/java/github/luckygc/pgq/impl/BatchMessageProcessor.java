@@ -1,6 +1,6 @@
 package github.luckygc.pgq.impl;
 
-import github.luckygc.pgq.Message;
+import github.luckygc.pgq.model.Message;
 import github.luckygc.pgq.api.BatchMessageHandler;
 import github.luckygc.pgq.api.DatabaseQueue;
 import github.luckygc.pgq.api.MessageManager;

@@ -1,6 +1,6 @@
 package github.luckygc.pgq.api;
 
-import github.luckygc.pgq.Message;
+import github.luckygc.pgq.model.Message;
 import java.time.Duration;
 import java.util.List;
 
