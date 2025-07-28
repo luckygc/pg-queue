@@ -35,13 +35,13 @@ public class Message {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(message);
 
-        Message messageObj = new Message();
-        messageObj.setCreateTime(LocalDateTime.now());
-        messageObj.setTopic(topic);
-        messageObj.setPriority(priority);
-        messageObj.setPayload(message);
-        messageObj.setAttempt(0);
-        return messageObj;
+        return new Builder()
+                .createTime(LocalDateTime.now())
+                .topic(topic)
+                .priority(priority)
+                .payload(message)
+                .attempt(0)
+                .build();
     }
 
     public static List<Message> of(String topic, List<String> messages, int priority) {
@@ -51,12 +51,13 @@ public class Message {
         List<Message> messagesObjs = new ArrayList<>(messages.size());
         LocalDateTime now = LocalDateTime.now();
         for (String message : messages) {
-            Message messageObj = new Message();
-            messageObj.setCreateTime(now);
-            messageObj.setTopic(topic);
-            messageObj.setPriority(priority);
-            messageObj.setPayload(message);
-            messageObj.setAttempt(0);
+            Message messageObj = new Builder()
+                    .createTime(now)
+                    .topic(topic)
+                    .priority(priority)
+                    .payload(message)
+                    .attempt(0)
+                    .build();
             messagesObjs.add(messageObj);
         }
 
@@ -129,7 +130,7 @@ public class Message {
         }
 
         public Message build() {
-            Message message = new Message(this);
+            return new Message(this);
         }
     }
 }
