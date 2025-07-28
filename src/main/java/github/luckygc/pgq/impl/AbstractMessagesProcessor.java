@@ -32,7 +32,7 @@ public abstract class AbstractMessagesProcessor implements QueueListener {
         }
 
         this.semaphore = new Semaphore(threadCount);
-        
+
         // 创建线程池
         this.threadPool = new ThreadPoolExecutor(
                 0, // corePoolSize: 0，空闲时不保留线程
@@ -42,7 +42,7 @@ public abstract class AbstractMessagesProcessor implements QueueListener {
                 new PgqThreadFactory(), // threadFactory: 自定义线程工厂
                 new ThreadPoolExecutor.AbortPolicy() // rejectedExecutionHandler: 拒绝策略
         );
-        
+
         // 允许核心线程超时回收
         threadPool.allowCoreThreadTimeOut(true);
     }
@@ -111,13 +111,13 @@ public abstract class AbstractMessagesProcessor implements QueueListener {
      * 自定义线程工厂，用于设置线程名称和属性
      */
     private class PgqThreadFactory implements ThreadFactory {
-        
+
         @Override
         public Thread newThread(Runnable r) {
             Thread thread = new Thread(r, "pgq-message-processor-%s-%d"
                     .formatted(topic(), threadCount.incrementAndGet()));
             thread.setDaemon(true);
-            thread.setUncaughtExceptionHandler((t, e) -> 
+            thread.setUncaughtExceptionHandler((t, e) ->
                     log.error("线程 {} 发生未捕获异常", t.getName(), e));
             return thread;
         }
