@@ -83,17 +83,18 @@
 			<version>${assertj.version}</version>
 			<scope>test</scope>
 		</dependency>
-        <!-- Spring Test 依赖 -->
+
+        <!-- Testcontainers 依赖 -->
         <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-test</artifactId>
-            <version>${spring.version}</version>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>1.21.3</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-            <version>${spring.version}</version>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>1.21.3</version>
             <scope>test</scope>
         </dependency>
 	</dependencies>
