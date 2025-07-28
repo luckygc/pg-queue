@@ -1,6 +1,7 @@
-package github.luckygc.pgq.api;
+package github.luckygc.pgq.api.support;
 
 import github.luckygc.pgq.PgqConstants;
+import github.luckygc.pgq.api.ProcessingMessageManager;
 import github.luckygc.pgq.model.Message;
 
 public interface SingleMessageHandler {
