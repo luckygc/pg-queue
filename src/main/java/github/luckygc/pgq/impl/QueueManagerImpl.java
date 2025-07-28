@@ -2,7 +2,7 @@ package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.ListenerDispatcher;
 import github.luckygc.pgq.PgChannelListener;
-import github.luckygc.pgq.PgqConstants;
+import github.luckygc.pgq.PgmqConstants;
 import github.luckygc.pgq.api.handler.BatchMessageHandler;
 import github.luckygc.pgq.api.MessageQueue;
 import github.luckygc.pgq.api.manager.DeadMessageManager;
@@ -60,7 +60,7 @@ public class QueueManagerImpl implements QueueManager {
         this.messageManager = new MessageManagerImpl(messageDao);
         this.deadMessageManager = new DeadMessageManagerImpl(messageDao);
         this.enablePgNotify = true;
-        this.pgChannelListener = new PgChannelListener(PgqConstants.TOPIC_CHANNEL, Objects.requireNonNull(jdbcUrl),
+        this.pgChannelListener = new PgChannelListener(PgmqConstants.TOPIC_CHANNEL, Objects.requireNonNull(jdbcUrl),
                 Objects.requireNonNull(username), password, listenerDispatcher);
     }
 

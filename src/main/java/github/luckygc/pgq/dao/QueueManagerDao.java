@@ -1,6 +1,6 @@
 package github.luckygc.pgq.dao;
 
-import github.luckygc.pgq.PgqConstants;
+import github.luckygc.pgq.PgmqConstants;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -57,7 +57,7 @@ public class QueueManagerDao {
             finalTopics = txTemplate.execute(ignore -> {
                 // 尝试获取锁
                 Boolean locked = jdbcTemplate.queryForObject("SELECT pg_try_advisory_xact_lock(?, ?) AS locked",
-                        boolMapper, PgqConstants.PGQ_ID, PgqConstants.SCHEDULER_ID);
+                        boolMapper, PgmqConstants.PGQ_ID, PgmqConstants.SCHEDULER_ID);
                 if (!Boolean.TRUE.equals(locked)) {
                     return Collections.emptyList();
                 }
@@ -84,6 +84,6 @@ public class QueueManagerDao {
 
     public void sendNotify(String topic) {
         Objects.requireNonNull(topic);
-        jdbcTemplate.query("select pg_notify(?, ?)", emptyMapper, PgqConstants.TOPIC_CHANNEL, topic);
+        jdbcTemplate.query("select pg_notify(?, ?)", emptyMapper, PgmqConstants.TOPIC_CHANNEL, topic);
     }
 }

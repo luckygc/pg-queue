@@ -1,8 +1,10 @@
 package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.ListenerDispatcher;
-import github.luckygc.pgq.PgqConstants;
+import github.luckygc.pgq.PgmqConstants;
+import github.luckygc.pgq.api.DelayMessageQueue;
 import github.luckygc.pgq.api.MessageQueue;
+import github.luckygc.pgq.api.PriorityMessageQueue;
 import github.luckygc.pgq.dao.DatabaseQueueDao;
 import github.luckygc.pgq.dao.QueueManagerDao;
 import github.luckygc.pgq.model.Message;
@@ -11,17 +13,15 @@ import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
-public class MessageQueueImpl implements MessageQueue {
+public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, PriorityMessageQueue {
 
     private final ListenerDispatcher listenerDispatcher;
     private final DatabaseQueueDao databaseQueueDao;
-    private final String topic;
     private final boolean enablePgNotify;
     private QueueManagerDao queueManagerDao;
 
     public MessageQueueImpl(DatabaseQueueDao databaseQueueDao, String topic, ListenerDispatcher listenerDispatcher) {
         this.databaseQueueDao = Objects.requireNonNull(databaseQueueDao);
-        this.topic = Objects.requireNonNull(topic);
         this.listenerDispatcher = Objects.requireNonNull(listenerDispatcher);
         this.enablePgNotify = false;
     }
@@ -29,22 +29,21 @@ public class MessageQueueImpl implements MessageQueue {
     public MessageQueueImpl(DatabaseQueueDao databaseQueueDao, String topic, ListenerDispatcher listenerDispatcher,
             QueueManagerDao queueManagerDao) {
         this.databaseQueueDao = Objects.requireNonNull(databaseQueueDao);
-        this.topic = Objects.requireNonNull(topic);
         this.listenerDispatcher = Objects.requireNonNull(listenerDispatcher);
         this.enablePgNotify = true;
         this.queueManagerDao = Objects.requireNonNull(queueManagerDao);
     }
 
     @Override
-    public void send(String message) {
-        Message messageObj = Message.of(topic, message, PgqConstants.MESSAGE_PRIORITY);
+    public void send(String topic, String message) {
+        Message messageObj = Message.of(topic, message, PgmqConstants.MESSAGE_PRIORITY);
         databaseQueueDao.insertMessage(messageObj);
         dispatchAndSendNotify();
     }
 
     @Override
-    public void send(String message, Duration processDelay) {
-        Message messageObj = Message.of(topic, message, PgqConstants.MESSAGE_PRIORITY);
+    public void send(String topic, String message, Duration processDelay) {
+        Message messageObj = Message.of(topic, message, PgmqConstants.MESSAGE_PRIORITY);
         databaseQueueDao.insertProcessLaterMessage(messageObj, processDelay);
     }
 
@@ -63,14 +62,14 @@ public class MessageQueueImpl implements MessageQueue {
 
     @Override
     public void send(List<String> messages) {
-        List<Message> messageObjs = Message.of(topic, messages, PgqConstants.MESSAGE_PRIORITY);
+        List<Message> messageObjs = Message.of(topic, messages, PgmqConstants.MESSAGE_PRIORITY);
         databaseQueueDao.insertMessages(messageObjs);
         dispatchAndSendNotify();
     }
 
     @Override
     public void send(List<String> messages, Duration processDelay) {
-        List<Message> messageObjs = Message.of(topic, messages, PgqConstants.MESSAGE_PRIORITY);
+        List<Message> messageObjs = Message.of(topic, messages, PgmqConstants.MESSAGE_PRIORITY);
         databaseQueueDao.insertProcessLaterMessages(messageObjs, processDelay);
     }
 
@@ -96,7 +95,7 @@ public class MessageQueueImpl implements MessageQueue {
 
     @Override
     public @Nullable Message pull() {
-        List<Message> messages = databaseQueueDao.pull(topic, 1, PgqConstants.PROCESS_TIMEOUT);
+        List<Message> messages = databaseQueueDao.pull(topic, 1, PgmqConstants.PROCESS_TIMEOUT);
         if (messages.isEmpty()) {
             return null;
         }
@@ -116,7 +115,7 @@ public class MessageQueueImpl implements MessageQueue {
 
     @Override
     public List<Message> pull(int pullCount) {
-        return databaseQueueDao.pull(topic, pullCount, PgqConstants.PROCESS_TIMEOUT);
+        return databaseQueueDao.pull(topic, pullCount, PgmqConstants.PROCESS_TIMEOUT);
     }
 
     @Override

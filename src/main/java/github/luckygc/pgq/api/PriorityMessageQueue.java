@@ -4,11 +4,11 @@ import github.luckygc.pgq.model.Message;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-public interface MessageQueue {
+public interface PriorityMessageQueue {
 
-    void send(String topic, String message);
+    void send(String topic, String message, int priority);
 
-    void send(String topic, List<String> messages);
+    void send(String topic, List<String> messages, int priority);
 
     @Nullable
     Message poll(String topic);

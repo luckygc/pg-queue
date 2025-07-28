@@ -2,7 +2,7 @@ package github.luckygc.pgq;
 
 import java.time.Duration;
 
-public class PgqConstants {
+public class PgmqConstants {
 
     /**
      * 默认消息优先级

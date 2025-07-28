@@ -1,5 +1,6 @@
 package github.luckygc.pgq.model;
 
+import github.luckygc.pgq.PgmqConstants;
 import github.luckygc.pgq.Utils;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -11,11 +12,11 @@ public class Message {
 
     private Message(Builder builder) {
         this.id = builder.id;
-        this.createTime = Objects.requireNonNull(builder.createTime);
-        this.payload = Objects.requireNonNull(builder.payload);
+        this.createTime = Objects.requireNonNullElseGet(builder.createTime, LocalDateTime::now);
+        this.priority = Objects.requireNonNullElse(builder.priority, PgmqConstants.MESSAGE_PRIORITY);
         this.topic = Objects.requireNonNull(builder.topic);
-        this.priority = Objects.requireNonNull(builder.priority);
-        this.attempt = Objects.requireNonNull(builder.attempt);
+        this.payload = Objects.requireNonNull(builder.payload);
+        this.attempt = Objects.requireNonNullElse(builder.attempt, 0);
     }
 
     @Nullable
