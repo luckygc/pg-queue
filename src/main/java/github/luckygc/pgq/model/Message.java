@@ -53,15 +53,15 @@ public class Message {
     }
 
     public void delete() {
-        messageDao.deleteProcessingMsgById(id);
+        messageDao.deleteProcessingMessageById(id);
     }
 
     public void dead() {
-        messageDao.moveProcessingMsgToDeadById(id);
+        messageDao.moveProcessingMessageToDeadById(id);
     }
 
     public void retry() {
-        messageDao.moveProcessingMsgToPendingById(id);
+        messageDao.moveProcessingMessageToPendingById(id);
     }
 
     public void retry(Duration processDelay) {
@@ -69,7 +69,7 @@ public class Message {
         Utils.checkDurationIsPositive(processDelay);
 
         LocalDateTime visibleTime = LocalDateTime.now().plus(processDelay);
-        messageDao.moveProcessingMsgToInvisibleById(id, visibleTime);
+        messageDao.moveProcessingMessageToInvisibleById(id, visibleTime);
     }
 
     public static class Builder {

@@ -13,13 +13,11 @@ import org.springframework.jdbc.core.RowMapper;
 public class MessageDao {
 
     private static final String INSERT_INTO_PENDING = """
-            insert into pgq_pending_queue
-                (create_time, topic, priority, payload, attempt)
+            insert into pgq_pending_queue(create_time, topic, priority, payload, attempt)
                 values(?, ?, ?, ?, ?)
             """;
     private static final String INSERT_INTO_INVISIBLE = """
-            insert into pgq_invisible_queue
-                (create_time, topic, priority, payload, attempt, visible_time)
+            insert into pgq_invisible_queue(create_time, topic, priority, payload, attempt, visible_time)
                 values(?, ?, ?, ?, ?, ?)
             """;
 
@@ -104,13 +102,13 @@ public class MessageDao {
         return jdbcTemplate.query(sql, rowMapper, topic, maxPoll, processTimeoutTime);
     }
 
-    public int deleteProcessingMsgById(Long id) {
+    public int deleteProcessingMessageById(Long id) {
         Objects.requireNonNull(id);
 
         return jdbcTemplate.update("delete from pgq_processing_queue where id = ?", id);
     }
 
-    public int moveProcessingMsgToDeadById(Long id) {
+    public int moveProcessingMessageToDeadById(Long id) {
         Objects.requireNonNull(id);
 
         String sql = """
@@ -125,7 +123,7 @@ public class MessageDao {
         return jdbcTemplate.update(sql, id);
     }
 
-    public int moveProcessingMsgToPendingById(Long id) {
+    public int moveProcessingMessageToPendingById(Long id) {
         Objects.requireNonNull(id);
 
         String sql = """
@@ -141,7 +139,7 @@ public class MessageDao {
         return jdbcTemplate.update(sql, id);
     }
 
-    public void moveProcessingMsgToInvisibleById(Long id, LocalDateTime visibleTime) {
+    public int moveProcessingMessageToInvisibleById(Long id, LocalDateTime visibleTime) {
         Objects.requireNonNull(id);
         Objects.requireNonNull(visibleTime);
 
@@ -155,7 +153,7 @@ public class MessageDao {
                 select id, create_time, topic, priority, payload, attempt, ? from message_to_retry
                 """;
 
-        jdbcTemplate.update(sql, id, visibleTime);
+        return jdbcTemplate.update(sql, id, visibleTime);
     }
 
     private Object[] mapToArgArray(MessageDO messageDO) {
