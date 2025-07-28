@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * 管理拉取到的消息
  */
-public interface ProcessingMessageManager {
+public interface MessageManager {
 
     void complete(Message message);
 

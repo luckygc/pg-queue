@@ -13,7 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 @DisplayName("数据库队列DAO集成测试")
-class DatabaseQueueDaoTest extends DatabaseTestBase {
+class MessageQueueDaoTest extends DatabaseTestBase {
 
     private DatabaseQueueDao databaseQueueDao;
 

@@ -1,6 +1,6 @@
 package github.luckygc.pgq.api.manager;
 
-import github.luckygc.pgq.api.DatabaseQueue;
+import github.luckygc.pgq.api.MessageQueue;
 import github.luckygc.pgq.api.handler.BatchMessageHandler;
 import github.luckygc.pgq.api.handler.SingleMessageHandler;
 import java.sql.SQLException;
@@ -8,9 +8,9 @@ import java.util.Map;
 
 public interface QueueManager {
 
-    DatabaseQueue queue(String topic);
+    MessageQueue queue(String topic);
 
-    ProcessingMessageManager processingMessageManager();
+    MessageManager processingMessageManager();
 
     DeadMessageManager deadMessageManager();
 

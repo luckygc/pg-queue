@@ -1,7 +1,7 @@
 package github.luckygc.pgq.impl;
 
-import github.luckygc.pgq.api.DatabaseQueue;
-import github.luckygc.pgq.api.manager.ProcessingMessageManager;
+import github.luckygc.pgq.api.MessageQueue;
+import github.luckygc.pgq.api.manager.MessageManager;
 import github.luckygc.pgq.api.callback.MessageAvailabilityCallback;
 import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -17,16 +17,16 @@ public abstract class AbstractMessagesProcessor implements MessageAvailabilityCa
 
     private static final Logger log = LoggerFactory.getLogger(AbstractMessagesProcessor.class);
 
-    protected final DatabaseQueue queue;
-    protected final ProcessingMessageManager processingMessageManager;
+    protected final MessageQueue queue;
+    protected final MessageManager messageManager;
     protected final Semaphore semaphore;
     private final ThreadPoolExecutor threadPool;
     private final AtomicInteger threadCount = new AtomicInteger(0);
 
-    public AbstractMessagesProcessor(DatabaseQueue queue, ProcessingMessageManager processingMessageManager,
+    public AbstractMessagesProcessor(MessageQueue queue, MessageManager messageManager,
             int threadCount) {
         this.queue = Objects.requireNonNull(queue);
-        this.processingMessageManager = Objects.requireNonNull(processingMessageManager);
+        this.messageManager = Objects.requireNonNull(messageManager);
         if (threadCount < 1 || threadCount > 200) {
             throw new IllegalArgumentException("线程数必须在1到200之间");
         }

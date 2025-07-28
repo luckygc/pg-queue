@@ -1,7 +1,7 @@
 package github.luckygc.pgq.api.handler;
 
 import github.luckygc.pgq.PgqConstants;
-import github.luckygc.pgq.api.manager.ProcessingMessageManager;
+import github.luckygc.pgq.api.manager.MessageManager;
 import github.luckygc.pgq.model.Message;
 
 public interface SingleMessageHandler {
@@ -22,5 +22,5 @@ public interface SingleMessageHandler {
 
     String topic();
 
-    void handle(ProcessingMessageManager processingMessageManager, Message message);
+    void handle(MessageManager messageManager, Message message);
 }

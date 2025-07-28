@@ -1,8 +1,8 @@
 package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.api.handler.BatchMessageHandler;
-import github.luckygc.pgq.api.DatabaseQueue;
-import github.luckygc.pgq.api.manager.ProcessingMessageManager;
+import github.luckygc.pgq.api.MessageQueue;
+import github.luckygc.pgq.api.manager.MessageManager;
 import github.luckygc.pgq.model.Message;
 import java.util.List;
 import java.util.Objects;
@@ -15,9 +15,9 @@ public class BatchMessageProcessor extends AbstractMessagesProcessor {
 
     private final BatchMessageHandler messageHandler;
 
-    public BatchMessageProcessor(DatabaseQueue queue, ProcessingMessageManager processingMessageManager,
+    public BatchMessageProcessor(MessageQueue queue, MessageManager messageManager,
             BatchMessageHandler messageHandler) {
-        super(queue, processingMessageManager, messageHandler.threadCount());
+        super(queue, messageManager, messageHandler.threadCount());
         this.messageHandler = Objects.requireNonNull(messageHandler);
     }
 
@@ -35,7 +35,7 @@ public class BatchMessageProcessor extends AbstractMessagesProcessor {
         }
         while (!(messages = queue.pull(pullCount)).isEmpty()) {
             try {
-                messageHandler.handle(processingMessageManager, messages);
+                messageHandler.handle(messageManager, messages);
             } catch (Throwable t) {
                 log.error("处理消息失败", t);
             }

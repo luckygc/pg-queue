@@ -2,7 +2,7 @@ package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.ListenerDispatcher;
 import github.luckygc.pgq.PgqConstants;
-import github.luckygc.pgq.api.DatabaseQueue;
+import github.luckygc.pgq.api.MessageQueue;
 import github.luckygc.pgq.dao.DatabaseQueueDao;
 import github.luckygc.pgq.dao.QueueManagerDao;
 import github.luckygc.pgq.model.Message;
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
-public class DatabaseQueueImpl implements DatabaseQueue {
+public class MessageQueueImpl implements MessageQueue {
 
     private final ListenerDispatcher listenerDispatcher;
     private final DatabaseQueueDao databaseQueueDao;
@@ -19,14 +19,14 @@ public class DatabaseQueueImpl implements DatabaseQueue {
     private final boolean enablePgNotify;
     private QueueManagerDao queueManagerDao;
 
-    public DatabaseQueueImpl(DatabaseQueueDao databaseQueueDao, String topic, ListenerDispatcher listenerDispatcher) {
+    public MessageQueueImpl(DatabaseQueueDao databaseQueueDao, String topic, ListenerDispatcher listenerDispatcher) {
         this.databaseQueueDao = Objects.requireNonNull(databaseQueueDao);
         this.topic = Objects.requireNonNull(topic);
         this.listenerDispatcher = Objects.requireNonNull(listenerDispatcher);
         this.enablePgNotify = false;
     }
 
-    public DatabaseQueueImpl(DatabaseQueueDao databaseQueueDao, String topic, ListenerDispatcher listenerDispatcher,
+    public MessageQueueImpl(DatabaseQueueDao databaseQueueDao, String topic, ListenerDispatcher listenerDispatcher,
             QueueManagerDao queueManagerDao) {
         this.databaseQueueDao = Objects.requireNonNull(databaseQueueDao);
         this.topic = Objects.requireNonNull(topic);
@@ -36,53 +36,53 @@ public class DatabaseQueueImpl implements DatabaseQueue {
     }
 
     @Override
-    public void push(String message) {
+    public void send(String message) {
         Message messageObj = Message.of(topic, message, PgqConstants.MESSAGE_PRIORITY);
         databaseQueueDao.insertMessage(messageObj);
         dispatchAndSendNotify();
     }
 
     @Override
-    public void push(String message, Duration processDelay) {
+    public void send(String message, Duration processDelay) {
         Message messageObj = Message.of(topic, message, PgqConstants.MESSAGE_PRIORITY);
         databaseQueueDao.insertProcessLaterMessage(messageObj, processDelay);
     }
 
     @Override
-    public void push(String message, int priority) {
+    public void send(String message, int priority) {
         Message messageObj = Message.of(topic, message, priority);
         databaseQueueDao.insertMessage(messageObj);
         dispatchAndSendNotify();
     }
 
     @Override
-    public void push(String message, Duration processDelay, int priority) {
+    public void send(String message, Duration processDelay, int priority) {
         Message messageObj = Message.of(topic, message, priority);
         databaseQueueDao.insertProcessLaterMessage(messageObj, processDelay);
     }
 
     @Override
-    public void push(List<String> messages) {
+    public void send(List<String> messages) {
         List<Message> messageObjs = Message.of(topic, messages, PgqConstants.MESSAGE_PRIORITY);
         databaseQueueDao.insertMessages(messageObjs);
         dispatchAndSendNotify();
     }
 
     @Override
-    public void push(List<String> messages, Duration processDelay) {
+    public void send(List<String> messages, Duration processDelay) {
         List<Message> messageObjs = Message.of(topic, messages, PgqConstants.MESSAGE_PRIORITY);
         databaseQueueDao.insertProcessLaterMessages(messageObjs, processDelay);
     }
 
     @Override
-    public void push(List<String> messages, int priority) {
+    public void send(List<String> messages, int priority) {
         List<Message> messageObjs = Message.of(topic, messages, priority);
         databaseQueueDao.insertMessages(messageObjs);
         dispatchAndSendNotify();
     }
 
     @Override
-    public void push(List<String> messages, Duration processDelay, int priority) {
+    public void send(List<String> messages, Duration processDelay, int priority) {
         List<Message> messageObjs = Message.of(topic, messages, priority);
         databaseQueueDao.insertProcessLaterMessages(messageObjs, processDelay);
     }

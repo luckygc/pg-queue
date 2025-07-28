@@ -1,7 +1,7 @@
 package github.luckygc.pgq.api.handler;
 
 import github.luckygc.pgq.PgqConstants;
-import github.luckygc.pgq.api.manager.ProcessingMessageManager;
+import github.luckygc.pgq.api.manager.MessageManager;
 import github.luckygc.pgq.model.Message;
 import java.util.List;
 
@@ -23,5 +23,5 @@ public interface BatchMessageHandler {
 
     String topic();
 
-    void handle(ProcessingMessageManager processingMessageManager, List<Message> messages);
+    void handle(MessageManager messageManager, List<Message> messages);
 }

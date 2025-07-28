@@ -1,16 +1,16 @@
 package github.luckygc.pgq.impl;
 
-import github.luckygc.pgq.api.manager.ProcessingMessageManager;
+import github.luckygc.pgq.api.manager.MessageManager;
 import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.model.Message;
 import java.time.Duration;
 import java.util.List;
 
-public class ProcessingMessageManagerImpl implements ProcessingMessageManager {
+public class MessageManagerImpl implements MessageManager {
 
     private final MessageDao messageDao;
 
-    public ProcessingMessageManagerImpl(MessageDao messageDao) {
+    public MessageManagerImpl(MessageDao messageDao) {
         this.messageDao = messageDao;
     }
 
