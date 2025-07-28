@@ -58,7 +58,7 @@ public class DatabaseQueueDao {
                     for update skip locked
             """;
 
-    private static final RowMapper<Message> rowMapper = (rs, ignore) -> new Message.Builder()
+    public static final RowMapper<Message> rowMapper = (rs, ignore) -> new Message.Builder()
             .id(rs.getLong(1))
             .createTime(rs.getTimestamp(2).toLocalDateTime())
             .topic(rs.getString(3))
