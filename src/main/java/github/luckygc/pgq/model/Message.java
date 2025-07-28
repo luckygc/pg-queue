@@ -1,6 +1,7 @@
 package github.luckygc.pgq.model;
 
-import github.luckygc.pgq.api.manager.MessageManager;
+import github.luckygc.pgq.Utils;
+import github.luckygc.pgq.dao.MessageDao;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -19,7 +20,7 @@ public class Message {
 
     private final Integer attempt;
 
-    private final MessageManager messageManager;
+    private final MessageDao messageDao;
 
     private Message(Builder builder) {
         this.id = Objects.requireNonNull(builder.id);
@@ -28,7 +29,7 @@ public class Message {
         this.topic = Objects.requireNonNull(builder.topic);
         this.payload = Objects.requireNonNull(builder.payload);
         this.attempt = Objects.requireNonNull(builder.attempt);
-        this.messageManager = Objects.requireNonNull(builder.messageManager);
+        this.messageDao = Objects.requireNonNull(builder.messageDao);
     }
 
     public LocalDateTime getCreateTime() {
@@ -52,19 +53,23 @@ public class Message {
     }
 
     public void delete() {
-        messageManager.delete(id);
+        messageDao.deleteProcessingMsgById(id);
     }
 
     public void dead() {
-        messageManager.delete(id);
+        messageDao.moveProcessingMsgToDeadById(id);
     }
 
     public void retry() {
-        messageManager.delete(id);
+        messageDao.moveProcessingMsgToPendingById(id);
     }
 
     public void retry(Duration processDelay) {
-        messageManager.delete(id);
+        Objects.requireNonNull(processDelay);
+        Utils.checkDurationIsPositive(processDelay);
+
+        LocalDateTime visibleTime = LocalDateTime.now().plus(processDelay);
+        messageDao.moveProcessingMsgToInvisibleById(id, visibleTime);
     }
 
     public static class Builder {
@@ -75,7 +80,7 @@ public class Message {
         private String topic;
         private Integer priority;
         private Integer attempt;
-        private MessageManager messageManager;
+        private MessageDao messageDao;
 
         public static Builder create() {
             return new Builder();
@@ -113,8 +118,8 @@ public class Message {
         }
 
 
-        public Builder messageManager(MessageManager messageManager) {
-            this.messageManager = messageManager;
+        public Builder messageDao(MessageDao messageDao) {
+            this.messageDao = messageDao;
             return this;
         }
 

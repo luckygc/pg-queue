@@ -5,7 +5,7 @@ import github.luckygc.pgq.PgmqConstants;
 import github.luckygc.pgq.api.DelayMessageQueue;
 import github.luckygc.pgq.api.MessageQueue;
 import github.luckygc.pgq.api.PriorityMessageQueue;
-import github.luckygc.pgq.dao.MessageQueueDao;
+import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.dao.QueueManagerDao;
 import github.luckygc.pgq.model.MessageDO;
 import github.luckygc.pgq.model.MessageDO.Builder;
@@ -17,19 +17,19 @@ import org.jspecify.annotations.Nullable;
 public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, PriorityMessageQueue {
 
     private final MessageAvailableCallbackDispatcher messageAvailableCallbackDispatcher;
-    private final MessageQueueDao messageQueueDao;
+    private final MessageDao messageDao;
     private final boolean enablePgNotify;
     private QueueManagerDao queueManagerDao;
 
-    public MessageQueueImpl(MessageQueueDao messageQueueDao, String topic, MessageAvailableCallbackDispatcher messageAvailableCallbackDispatcher) {
-        this.messageQueueDao = Objects.requireNonNull(messageQueueDao);
+    public MessageQueueImpl(MessageDao messageDao, String topic, MessageAvailableCallbackDispatcher messageAvailableCallbackDispatcher) {
+        this.messageDao = Objects.requireNonNull(messageDao);
         this.messageAvailableCallbackDispatcher = Objects.requireNonNull(messageAvailableCallbackDispatcher);
         this.enablePgNotify = false;
     }
 
-    public MessageQueueImpl(MessageQueueDao messageQueueDao, String topic, MessageAvailableCallbackDispatcher messageAvailableCallbackDispatcher,
+    public MessageQueueImpl(MessageDao messageDao, String topic, MessageAvailableCallbackDispatcher messageAvailableCallbackDispatcher,
             QueueManagerDao queueManagerDao) {
-        this.messageQueueDao = Objects.requireNonNull(messageQueueDao);
+        this.messageDao = Objects.requireNonNull(messageDao);
         this.messageAvailableCallbackDispatcher = Objects.requireNonNull(messageAvailableCallbackDispatcher);
         this.enablePgNotify = true;
         this.queueManagerDao = Objects.requireNonNull(queueManagerDao);
@@ -41,7 +41,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
                 .topic(topic)
                 .payload(message)
                 .build();
-        messageQueueDao.insertMessage(messageDOObj);
+        messageDao.insertMessage(messageDOObj);
 
         messageAvailableCallbackDispatcher.dispatchCallback(topic);
         if (enablePgNotify) {
@@ -52,46 +52,46 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
     @Override
     public void send(String topic, String message, Duration processDelay) {
         MessageDO messageDOObj = MessageDO.of(topic, message, PgmqConstants.MESSAGE_PRIORITY);
-        messageQueueDao.insertProcessLaterMessage(messageDOObj, processDelay);
+        messageDao.insertProcessLaterMessage(messageDOObj, processDelay);
     }
 
     @Override
     public void send(String message, int priority) {
         MessageDO messageDOObj = MessageDO.of(topic, message, priority);
-        messageQueueDao.insertMessage(messageDOObj);
+        messageDao.insertMessage(messageDOObj);
         dispatchAndSendNotify();
     }
 
     @Override
     public void send(String message, Duration processDelay, int priority) {
         MessageDO messageDOObj = MessageDO.of(topic, message, priority);
-        messageQueueDao.insertProcessLaterMessage(messageDOObj, processDelay);
+        messageDao.insertProcessLaterMessage(messageDOObj, processDelay);
     }
 
     @Override
     public void send(List<String> messages) {
         List<MessageDO> messageDOObjs = MessageDO.of(topic, messages, PgmqConstants.MESSAGE_PRIORITY);
-        messageQueueDao.insertMessages(messageDOObjs);
+        messageDao.insertMessages(messageDOObjs);
         dispatchAndSendNotify();
     }
 
     @Override
     public void send(List<String> messages, Duration processDelay) {
         List<MessageDO> messageDOObjs = MessageDO.of(topic, messages, PgmqConstants.MESSAGE_PRIORITY);
-        messageQueueDao.insertProcessLaterMessages(messageDOObjs, processDelay);
+        messageDao.insertProcessLaterMessages(messageDOObjs, processDelay);
     }
 
     @Override
     public void send(List<String> messages, int priority) {
         List<MessageDO> messageDOObjs = MessageDO.of(topic, messages, priority);
-        messageQueueDao.insertMessages(messageDOObjs);
+        messageDao.insertMessages(messageDOObjs);
         dispatchAndSendNotify();
     }
 
     @Override
     public void send(List<String> messages, Duration processDelay, int priority) {
         List<MessageDO> messageDOObjs = MessageDO.of(topic, messages, priority);
-        messageQueueDao.insertProcessLaterMessages(messageDOObjs, processDelay);
+        messageDao.insertProcessLaterMessages(messageDOObjs, processDelay);
     }
 
     private void dispatchAndSendNotify() {
@@ -103,7 +103,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
 
     @Override
     public @Nullable MessageDO pull() {
-        List<MessageDO> messageDOS = messageQueueDao.getPendingMessagesAndMoveToProcessing(topic, 1, PgmqConstants.PROCESS_TIMEOUT);
+        List<MessageDO> messageDOS = messageDao.getPendingMessagesAndMoveToProcessing(topic, 1, PgmqConstants.PROCESS_TIMEOUT);
         if (messageDOS.isEmpty()) {
             return null;
         }
@@ -113,7 +113,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
 
     @Override
     public @Nullable MessageDO pull(Duration processTimeout) {
-        List<MessageDO> messageDOS = messageQueueDao.getPendingMessagesAndMoveToProcessing(topic, 1, processTimeout);
+        List<MessageDO> messageDOS = messageDao.getPendingMessagesAndMoveToProcessing(topic, 1, processTimeout);
         if (messageDOS.isEmpty()) {
             return null;
         }
@@ -123,11 +123,11 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
 
     @Override
     public List<MessageDO> pull(int pullCount) {
-        return messageQueueDao.getPendingMessagesAndMoveToProcessing(topic, pullCount, PgmqConstants.PROCESS_TIMEOUT);
+        return messageDao.getPendingMessagesAndMoveToProcessing(topic, pullCount, PgmqConstants.PROCESS_TIMEOUT);
     }
 
     @Override
     public List<MessageDO> pull(int pullCount, Duration processTimeout) {
-        return messageQueueDao.getPendingMessagesAndMoveToProcessing(topic, pullCount, processTimeout);
+        return messageDao.getPendingMessagesAndMoveToProcessing(topic, pullCount, processTimeout);
     }
 }

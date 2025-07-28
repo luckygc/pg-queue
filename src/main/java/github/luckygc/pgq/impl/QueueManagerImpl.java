@@ -11,7 +11,6 @@ import github.luckygc.pgq.api.manager.DeadMessageManager;
 import github.luckygc.pgq.api.manager.MessageManager;
 import github.luckygc.pgq.api.manager.QueueManager;
 import github.luckygc.pgq.api.handler.SingleMessageHandler;
-import github.luckygc.pgq.dao.MessageQueueDao;
 import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.dao.QueueManagerDao;
 import java.sql.SQLException;
@@ -35,7 +34,7 @@ public class QueueManagerImpl implements QueueManager {
 
     private final MessageAvailableCallbackDispatcher messageAvailableCallbackDispatcher;
     private final QueueManagerDao queueManagerDao;
-    private final MessageQueueDao messageQueueDao;
+    private final MessageDao messageDao;
     private final MessageManager messageManager;
     private final DeadMessageManager deadMessageManager;
     private ScheduledExecutorService scheduler;
@@ -46,7 +45,7 @@ public class QueueManagerImpl implements QueueManager {
     public QueueManagerImpl(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
         this.messageAvailableCallbackDispatcher = new MessageAvailableCallbackDispatcher();
         this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
-        this.messageQueueDao = new MessageQueueDao(jdbcTemplate, transactionTemplate);
+        this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
         MessageDao messageDao = new MessageDao(jdbcTemplate);
         this.messageManager = new MessageManagerImpl(messageDao);
         this.deadMessageManager = new DeadMessageManagerImpl(messageDao);
@@ -57,7 +56,7 @@ public class QueueManagerImpl implements QueueManager {
             String username, String password) {
         this.messageAvailableCallbackDispatcher = new MessageAvailableCallbackDispatcher();
         this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
-        this.messageQueueDao = new MessageQueueDao(jdbcTemplate, transactionTemplate);
+        this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
         MessageDao messageDao = new MessageDao(jdbcTemplate);
         this.messageManager = new MessageManagerImpl(messageDao);
         this.deadMessageManager = new DeadMessageManagerImpl(messageDao);
@@ -74,10 +73,10 @@ public class QueueManagerImpl implements QueueManager {
             }
 
             if (enablePgNotify) {
-                return new MessageQueueImpl(messageQueueDao, k, messageAvailableCallbackDispatcher, queueManagerDao);
+                return new MessageQueueImpl(messageDao, k, messageAvailableCallbackDispatcher, queueManagerDao);
             }
 
-            return new MessageQueueImpl(messageQueueDao, k, messageAvailableCallbackDispatcher);
+            return new MessageQueueImpl(messageDao, k, messageAvailableCallbackDispatcher);
         });
     }
 
