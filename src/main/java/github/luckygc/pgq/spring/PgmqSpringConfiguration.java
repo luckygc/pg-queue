@@ -1,6 +1,6 @@
 package github.luckygc.pgq.spring;
 
-import github.luckygc.pgq.api.QueueManager;
+import github.luckygc.pgq.api.manager.QueueManager;
 import github.luckygc.pgq.impl.QueueManagerImpl;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.ObjectProvider;

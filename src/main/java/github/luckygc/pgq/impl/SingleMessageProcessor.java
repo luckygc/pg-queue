@@ -1,7 +1,7 @@
 package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.api.DatabaseQueue;
-import github.luckygc.pgq.api.ProcessingMessageManager;
+import github.luckygc.pgq.api.manager.ProcessingMessageManager;
 import github.luckygc.pgq.api.handler.SingleMessageHandler;
 import github.luckygc.pgq.model.Message;
 import java.util.List;

@@ -1,5 +1,6 @@
-package github.luckygc.pgq.api;
+package github.luckygc.pgq.api.manager;
 
+import github.luckygc.pgq.api.DatabaseQueue;
 import github.luckygc.pgq.api.handler.BatchMessageHandler;
 import github.luckygc.pgq.api.handler.SingleMessageHandler;
 import java.sql.SQLException;
@@ -11,7 +12,7 @@ public interface QueueManager {
 
     ProcessingMessageManager processingMessageManager();
 
-    DeadMessageManger deadMessageManager();
+    DeadMessageManager deadMessageManager();
 
     boolean isEnablePgNotify();
 

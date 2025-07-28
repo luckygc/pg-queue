@@ -5,9 +5,9 @@ import github.luckygc.pgq.PgChannelListener;
 import github.luckygc.pgq.PgqConstants;
 import github.luckygc.pgq.api.handler.BatchMessageHandler;
 import github.luckygc.pgq.api.DatabaseQueue;
-import github.luckygc.pgq.api.DeadMessageManger;
-import github.luckygc.pgq.api.ProcessingMessageManager;
-import github.luckygc.pgq.api.QueueManager;
+import github.luckygc.pgq.api.manager.DeadMessageManager;
+import github.luckygc.pgq.api.manager.ProcessingMessageManager;
+import github.luckygc.pgq.api.manager.QueueManager;
 import github.luckygc.pgq.api.handler.SingleMessageHandler;
 import github.luckygc.pgq.dao.DatabaseQueueDao;
 import github.luckygc.pgq.dao.MessageDao;
@@ -35,7 +35,7 @@ public class QueueManagerImpl implements QueueManager {
     private final QueueManagerDao queueManagerDao;
     private final DatabaseQueueDao databaseQueueDao;
     private final ProcessingMessageManager processingMessageManager;
-    private final DeadMessageManger deadMessageManger;
+    private final DeadMessageManager deadMessageManager;
     private ScheduledExecutorService scheduler;
 
     private final boolean enablePgNotify;
@@ -47,7 +47,7 @@ public class QueueManagerImpl implements QueueManager {
         this.databaseQueueDao = new DatabaseQueueDao(jdbcTemplate, transactionTemplate);
         MessageDao messageDao = new MessageDao(jdbcTemplate);
         this.processingMessageManager = new ProcessingMessageManagerImpl(messageDao);
-        this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
+        this.deadMessageManager = new DeadMessageManagerImpl(messageDao);
         this.enablePgNotify = false;
     }
 
@@ -58,7 +58,7 @@ public class QueueManagerImpl implements QueueManager {
         this.databaseQueueDao = new DatabaseQueueDao(jdbcTemplate, transactionTemplate);
         MessageDao messageDao = new MessageDao(jdbcTemplate);
         this.processingMessageManager = new ProcessingMessageManagerImpl(messageDao);
-        this.deadMessageManger = new DeadMessageManagerImpl(messageDao);
+        this.deadMessageManager = new DeadMessageManagerImpl(messageDao);
         this.enablePgNotify = true;
         this.pgChannelListener = new PgChannelListener(PgqConstants.TOPIC_CHANNEL, Objects.requireNonNull(jdbcUrl),
                 Objects.requireNonNull(username), password, listenerDispatcher);
@@ -99,8 +99,8 @@ public class QueueManagerImpl implements QueueManager {
     }
 
     @Override
-    public DeadMessageManger deadMessageManager() {
-        return deadMessageManger;
+    public DeadMessageManager deadMessageManager() {
+        return deadMessageManager;
     }
 
     @Override
