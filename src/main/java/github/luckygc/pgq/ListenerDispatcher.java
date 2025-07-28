@@ -1,6 +1,6 @@
 package github.luckygc.pgq;
 
-import github.luckygc.pgq.api.QueueListener;
+import github.luckygc.pgq.api.callback.MessageAvailabilityCallback;
 import github.luckygc.pgq.impl.AbstractMessagesProcessor;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,11 +13,11 @@ public class ListenerDispatcher {
 
     private static final Logger log = LoggerFactory.getLogger(ListenerDispatcher.class);
 
-    private final Map<String, QueueListener> listenerMap = new ConcurrentHashMap<>();
+    private final Map<String, MessageAvailabilityCallback> listenerMap = new ConcurrentHashMap<>();
 
-    public void registerListener(QueueListener listener) {
-        QueueListener queueListener = listenerMap.putIfAbsent(listener.topic(), listener);
-        if (queueListener != null) {
+    public void registerListener(MessageAvailabilityCallback listener) {
+        MessageAvailabilityCallback messageAvailabilityCallback = listenerMap.putIfAbsent(listener.topic(), listener);
+        if (messageAvailabilityCallback != null) {
             throw new IllegalStateException("当前已存在topic[%s]的监听器".formatted(listener.topic()));
         }
     }
@@ -37,7 +37,7 @@ public class ListenerDispatcher {
     }
 
     public void dispatch(String topic) {
-        QueueListener listener = listenerMap.get(topic);
+        MessageAvailabilityCallback listener = listenerMap.get(topic);
         if (listener == null) {
             return;
         }
@@ -49,7 +49,7 @@ public class ListenerDispatcher {
      * 关闭所有消息处理器的线程池
      */
     public void shutdown() {
-        for (QueueListener listener : listenerMap.values()) {
+        for (MessageAvailabilityCallback listener : listenerMap.values()) {
             if (listener instanceof AbstractMessagesProcessor processor) {
                 try {
                     processor.shutdown();
@@ -66,7 +66,7 @@ public class ListenerDispatcher {
      */
     public Map<String, String> getThreadPoolStatus() {
         Map<String, String> statusMap = new ConcurrentHashMap<>();
-        for (Map.Entry<String, QueueListener> entry : listenerMap.entrySet()) {
+        for (Map.Entry<String, MessageAvailabilityCallback> entry : listenerMap.entrySet()) {
             if (entry.getValue() instanceof AbstractMessagesProcessor processor) {
                 statusMap.put(entry.getKey(), processor.getThreadPoolStatus());
             }

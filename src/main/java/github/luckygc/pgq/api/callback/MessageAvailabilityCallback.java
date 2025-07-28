@@ -1,6 +1,6 @@
-package github.luckygc.pgq.api;
+package github.luckygc.pgq.api.callback;
 
-public interface QueueListener {
+public interface MessageAvailabilityCallback {
 
     String topic();
 

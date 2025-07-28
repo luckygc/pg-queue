@@ -2,7 +2,7 @@ package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.api.DatabaseQueue;
 import github.luckygc.pgq.api.ProcessingMessageManager;
-import github.luckygc.pgq.api.QueueListener;
+import github.luckygc.pgq.api.callback.MessageAvailabilityCallback;
 import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class AbstractMessagesProcessor implements QueueListener {
+public abstract class AbstractMessagesProcessor implements MessageAvailabilityCallback {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractMessagesProcessor.class);
 
