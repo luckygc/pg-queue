@@ -6,38 +6,30 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
-import org.springframework.jdbc.core.RowMapper;
 
 public class Message {
 
-    public static final RowMapper<Message> rowMapper = (rs, ignore) -> {
-        Message message = new Message();
-        message.setId(rs.getLong(1));
-        message.setCreateTime(rs.getTimestamp(2).toLocalDateTime());
-        message.setTopic(rs.getString(3));
-        message.setPriority(rs.getInt(4));
-        message.setPayload(rs.getString(5));
-        message.setAttempt(rs.getInt(6));
-        return message;
-    };
+    private Message(Builder builder) {
+        this.id = builder.id;
+        this.createTime = Objects.requireNonNull(builder.createTime);
+        this.payload = Objects.requireNonNull(builder.payload);
+        this.topic = Objects.requireNonNull(builder.topic);
+        this.priority = Objects.requireNonNull(builder.priority);
+        this.attempt = Objects.requireNonNull(builder.attempt);
+    }
 
     @Nullable
-    private Long id;
+    private final Long id;
 
-    @Nullable
-    private LocalDateTime createTime;
+    private final LocalDateTime createTime;
 
-    @Nullable
-    private String payload;
+    private final String payload;
 
-    @Nullable
-    private String topic;
+    private final String topic;
 
-    @Nullable
-    private Integer priority;
+    private final Integer priority;
 
-    @Nullable
-    private Integer attempt;
+    private final Integer attempt;
 
     public static Message of(String topic, String message, int priority) {
         Objects.requireNonNull(topic);
@@ -76,52 +68,68 @@ public class Message {
         return id;
     }
 
-    @Nullable
     public LocalDateTime getCreateTime() {
         return createTime;
     }
 
-    @Nullable
     public String getPayload() {
         return payload;
     }
 
-    @Nullable
     public String getTopic() {
         return topic;
     }
 
-    @Nullable
     public Integer getPriority() {
         return priority;
     }
 
-    @Nullable
     public Integer getAttempt() {
         return attempt;
     }
 
-    private void setId(Long id) {
-        this.id = id;
-    }
+    public static class Builder {
 
-    private void setCreateTime(LocalDateTime createTime) {
-        this.createTime = createTime;
-    }
+        private Long id;
+        private LocalDateTime createTime;
+        private String payload;
+        private String topic;
+        private Integer priority;
+        private Integer attempt;
 
-    private void setPayload(String payload) {
-        this.payload = payload;
-    }
+        public Builder id(Long id) {
+            this.id = id;
+            return this;
+        }
 
-    private void setTopic(String topic) {
-        this.topic = topic;
-    }
+        public Builder createTime(LocalDateTime createTime) {
+            this.createTime = createTime;
+            return this;
+        }
 
-    private void setPriority(Integer priority) {
-        this.priority = priority;
-    }
+        public Builder payload(String payload) {
+            this.payload = payload;
+            return this;
+        }
 
-    private void setAttempt(Integer attempt) {
-        this.attempt = attempt;
+
+        public Builder topic(String topic) {
+            this.topic = topic;
+            return this;
+        }
+
+        public Builder priority(Integer priority) {
+            this.priority = priority;
+            return this;
+        }
+
+        public Builder attempt(Integer attempt) {
+            this.attempt = attempt;
+            return this;
+        }
+
+        public Message build() {
+            Message message = new Message(this);
+        }
     }
 }

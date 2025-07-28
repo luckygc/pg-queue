@@ -2,6 +2,7 @@ package github.luckygc.pgq.dao;
 
 import github.luckygc.pgq.Utils;
 import github.luckygc.pgq.model.Message;
+import github.luckygc.pgq.model.Message.Builder;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementSetter;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.transaction.support.TransactionTemplate;
 
 public class DatabaseQueueDao {
@@ -55,6 +57,15 @@ public class DatabaseQueueDao {
                     limit ?
                     for update skip locked
             """;
+
+    private static final RowMapper<Message> rowMapper = (rs, ignore) -> new Message.Builder()
+            .id(rs.getLong(1))
+            .createTime(rs.getTimestamp(2).toLocalDateTime())
+            .topic(rs.getString(3))
+            .priority(rs.getInt(4))
+            .payload(rs.getString(5))
+            .attempt(rs.getInt(6))
+            .build();
 
     private static final long MAX_PROCESS_TIMEOUT_MILLIS = Duration.ofMinutes(30).toMillis();
 
@@ -105,7 +116,7 @@ public class DatabaseQueueDao {
         List<Message> messageObjs = txTemplate.execute(ignore -> {
             List<Message> messages = jdbcTemplate.query(
                     FIND_PENDING_MESSAGES_SKIP_LOCKED,
-                    Message.rowMapper,
+                    rowMapper,
                     topic,
                     pullCount);
 
