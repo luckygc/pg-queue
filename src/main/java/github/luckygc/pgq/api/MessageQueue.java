@@ -13,8 +13,5 @@ public interface MessageQueue {
     @Nullable
     Message poll(String topic);
 
-    @Nullable
-    Message poll(String topic);
-
-    List<Message> poll(String topic, int max);
+    List<Message> poll(String topic, int pollMax);
 }

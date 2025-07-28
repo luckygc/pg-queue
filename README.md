@@ -70,21 +70,21 @@ SingleMessageHandler handler = new SingleMessageHandler() {
     }
     
     @Override
-    public void handle(ProcessingMessageManager manager, Message message) {
+    public void handle(ProcessingMessageManager manager, Message messageDO) {
         try {
             // 处理消息逻辑
-            processOrder(message.getPayload());
-            manager.delete(message); // 处理成功，删除消息
+            processOrder(messageDO.getPayload());
+            manager.delete(messageDO); // 处理成功，删除消息
         } catch (RetryableException e) {
             // 可重试异常，重试处理
-            if (message.getAttempt() >= 3) {
-                manager.dead(message); // 超过重试次数，进入死信队列
+            if (messageDO.getAttempt() >= 3) {
+                manager.dead(messageDO); // 超过重试次数，进入死信队列
             } else {
-                manager.retry(message, Duration.ofMinutes(10)); // 10分钟后重试
+                manager.retry(messageDO, Duration.ofMinutes(10)); // 10分钟后重试
             }
         } catch (Exception e) {
             // 不可重试异常，直接进入死信队列
-            manager.dead(message);
+            manager.dead(messageDO);
         }
     }
 };
@@ -129,10 +129,10 @@ Map<String, String> getThreadPoolStatus();
 
 ```java
 // 发送消息
-void push(String message);
-void push(String message, Duration processDelay);
-void push(String message, int priority);
-void push(List<String> messages);
+void push(String messageDO);
+void push(String messageDO, Duration processDelay);
+void push(String messageDO, int priority);
+void push(List<String> messageDOS);
 
 // 拉取消息
 Message pull();
@@ -146,16 +146,16 @@ List<Message> pull(int pullCount);
 
 ```java
 // 删除消息（处理成功）
-void delete(Message message);
+void delete(Message messageDO);
 
 // 完成消息（保留记录）
-void complete(Message message);
+void complete(Message messageDO);
 
 // 重试消息
-void retry(Message message, Duration retryDelay);
+void retry(Message messageDO, Duration retryDelay);
 
 // 进入死信队列
-void dead(Message message);
+void dead(Message messageDO);
 ```
 
 ## 高级配置
@@ -189,12 +189,12 @@ BatchMessageHandler batchHandler = new BatchMessageHandler() {
     }
     
     @Override
-    public void handle(ProcessingMessageManager manager, List<Message> messages) {
+    public void handle(ProcessingMessageManager manager, List<Message> messageDOS) {
         // 批量处理逻辑
-        processBatchOrders(messages);
+        processBatchOrders(messageDOS);
         
         // 批量删除
-        manager.delete(messages);
+        manager.delete(messageDOS);
     }
 };
 ```

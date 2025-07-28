@@ -1,43 +1,23 @@
 package github.luckygc.pgq.api.manager;
 
-import github.luckygc.pgq.model.Message;
 import java.time.Duration;
-import java.util.List;
 
 /**
  * 管理拉取到的消息
  */
 public interface MessageManager {
 
-    void complete(Message message);
+    void dead(Long id);
 
-    void complete(List<Message> messages);
-
-    void dead(Message message);
-
-    void dead(List<Message> messages);
-
-    void delete(Message message);
-
-    void delete(List<Message> messages);
+    void delete(Long id);
 
     /**
      * 立即重试
      */
-    void retry(Message message);
+    void retry(Long id);
 
     /**
      * 延迟重试
      */
-    void retry(Message message, Duration processDelay);
-
-    /**
-     * 立即重试
-     */
-    void retry(List<Message> messages);
-
-    /**
-     * 延迟重试
-     */
-    void retry(List<Message> messages, Duration processDelay);
+    void retry(Long id, Duration processDelay);
 }

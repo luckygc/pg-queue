@@ -1,11 +1,15 @@
 package github.luckygc.pgq.api.manager;
 
-import github.luckygc.pgq.api.handler.BatchMessageHandler;
-import github.luckygc.pgq.api.handler.SingleMessageHandler;
+import github.luckygc.pgq.api.handler.MessageHandler;
+import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 public interface HandlerManager {
 
-    void registerMessageHandler(SingleMessageHandler messageHandler);
+    void register(MessageHandler messageHandler);
 
-    void registerMessageHandler(BatchMessageHandler messageHandler);
+    @Nullable
+    MessageHandler get(String topic);
+
+    List<MessageHandler> getAll();
 }

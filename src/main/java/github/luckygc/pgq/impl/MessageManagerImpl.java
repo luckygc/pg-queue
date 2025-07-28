@@ -1,10 +1,11 @@
 package github.luckygc.pgq.impl;
 
+import github.luckygc.pgq.Utils;
 import github.luckygc.pgq.api.manager.MessageManager;
 import github.luckygc.pgq.dao.MessageDao;
-import github.luckygc.pgq.model.Message;
 import java.time.Duration;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.util.Objects;
 
 public class MessageManagerImpl implements MessageManager {
 
@@ -14,53 +15,28 @@ public class MessageManagerImpl implements MessageManager {
         this.messageDao = messageDao;
     }
 
+
     @Override
-    public void complete(Message message) {
-        messageDao.completeProcessingMessage(message);
+    public void dead(Long id) {
+        messageDao.moveProcessingMsgToDeadById(id);
     }
 
     @Override
-    public void complete(List<Message> messages) {
-        messageDao.completeProcessingMessages(messages);
+    public void delete(Long id) {
+        messageDao.deleteProcessingMsgById(id);
     }
 
     @Override
-    public void dead(Message message) {
-        messageDao.deadProcessingMessage(message);
+    public void retry(Long id) {
+        messageDao.moveProcessingMsgToPendingById(id);
     }
 
     @Override
-    public void dead(List<Message> messages) {
-        messageDao.deadProcessingMessages(messages);
-    }
+    public void retry(Long id, Duration processDelay) {
+        Objects.requireNonNull(processDelay);
+        Utils.checkDurationIsPositive(processDelay);
 
-    @Override
-    public void delete(Message message) {
-        messageDao.deleteProcessingMessage(message);
-    }
-
-    @Override
-    public void delete(List<Message> messages) {
-        messageDao.deleteProcessingMessages(messages);
-    }
-
-    @Override
-    public void retry(Message message) {
-        messageDao.retryProcessingMessage(message);
-    }
-
-    @Override
-    public void retry(Message message, Duration processDelay) {
-        messageDao.retryProcessingMessage(message, processDelay);
-    }
-
-    @Override
-    public void retry(List<Message> messages) {
-        messageDao.retryProcessingMessages(messages);
-    }
-
-    @Override
-    public void retry(List<Message> messages, Duration processDelay) {
-        messageDao.retryProcessingMessages(messages, processDelay);
+        LocalDateTime visibleTime = LocalDateTime.now().plus(processDelay);
+        messageDao.moveProcessingMsgToInvisibleById(id, visibleTime);
     }
 }

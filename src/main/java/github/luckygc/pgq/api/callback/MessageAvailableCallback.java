@@ -1,9 +1,6 @@
 package github.luckygc.pgq.api.callback;
 
-public interface MessageAvailabilityCallback {
-
-    String topic();
-
+public interface MessageAvailableCallback {
     /**
      * 不允许阻塞
      */

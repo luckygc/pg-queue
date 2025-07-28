@@ -12,9 +12,9 @@ public class PgmqConstants {
     /**
      * 默认消息处理超时时间
      */
-    public static final Duration PROCESS_TIMEOUT = Duration.ofMinutes(10);
+    public static final Duration PROCESS_TIMEOUT = Duration.ofMinutes(30);
 
-    public static final int MESSAGE_HANDLER_PULL_COUNT = 50;
+    public static final int MAX_POLL = 50;
     public static final int MESSAGE_HANDLER_THREAD_COUNT = 1;
 
     public static final int PGQ_ID = 199738;

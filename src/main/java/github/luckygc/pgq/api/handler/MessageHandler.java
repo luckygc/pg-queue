@@ -1,17 +1,16 @@
 package github.luckygc.pgq.api.handler;
 
 import github.luckygc.pgq.PgmqConstants;
-import github.luckygc.pgq.api.manager.MessageManager;
 import github.luckygc.pgq.model.Message;
-import java.util.List;
+import github.luckygc.pgq.model.MessageDO;
 
-public interface BatchMessageHandler {
+public interface MessageHandler {
 
     /**
      * 范围[1,5000]
      */
-    default int pullCount() {
-        return PgmqConstants.MESSAGE_HANDLER_PULL_COUNT;
+    default int maxPoll() {
+        return PgmqConstants.MAX_POLL;
     }
 
     /**
@@ -23,5 +22,5 @@ public interface BatchMessageHandler {
 
     String topic();
 
-    void handle(MessageManager messageManager, List<Message> messages);
+    void handle(Message message);
 }

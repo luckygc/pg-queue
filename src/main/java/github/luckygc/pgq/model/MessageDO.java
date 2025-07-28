@@ -1,13 +1,10 @@
 package github.luckygc.pgq.model;
 
-import github.luckygc.pgq.api.manager.MessageManager;
-import java.time.Duration;
+import github.luckygc.pgq.PgmqConstants;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-public class Message {
-
-    private final Long id;
+public class MessageDO {
 
     private final LocalDateTime createTime;
 
@@ -19,16 +16,12 @@ public class Message {
 
     private final Integer attempt;
 
-    private final MessageManager messageManager;
-
-    private Message(Builder builder) {
-        this.id = Objects.requireNonNull(builder.id);
-        this.createTime = Objects.requireNonNull(builder.createTime);
-        this.priority = Objects.requireNonNull(builder.priority);
+    private MessageDO(Builder builder) {
+        this.createTime = Objects.requireNonNullElseGet(builder.createTime, LocalDateTime::now);
+        this.priority = Objects.requireNonNullElse(builder.priority, PgmqConstants.MESSAGE_PRIORITY);
         this.topic = Objects.requireNonNull(builder.topic);
         this.payload = Objects.requireNonNull(builder.payload);
-        this.attempt = Objects.requireNonNull(builder.attempt);
-        this.messageManager = Objects.requireNonNull(builder.messageManager);
+        this.attempt = Objects.requireNonNullElse(builder.attempt, 0);
     }
 
     public LocalDateTime getCreateTime() {
@@ -51,39 +44,16 @@ public class Message {
         return attempt;
     }
 
-    public void delete() {
-        messageManager.delete(id);
-    }
-
-    public void dead() {
-        messageManager.delete(id);
-    }
-
-    public void retry() {
-        messageManager.delete(id);
-    }
-
-    public void retry(Duration processDelay) {
-        messageManager.delete(id);
-    }
-
     public static class Builder {
 
-        private Long id;
         private LocalDateTime createTime;
         private String payload;
         private String topic;
         private Integer priority;
         private Integer attempt;
-        private MessageManager messageManager;
 
         public static Builder create() {
             return new Builder();
-        }
-
-        public Builder id(Long id) {
-            this.id = id;
-            return this;
         }
 
         public Builder createTime(LocalDateTime createTime) {
@@ -112,14 +82,8 @@ public class Message {
             return this;
         }
 
-
-        public Builder messageManager(MessageManager messageManager) {
-            this.messageManager = messageManager;
-            return this;
-        }
-
-        public Message build() {
-            return new Message(this);
+        public MessageDO build() {
+            return new MessageDO(this);
         }
     }
 }

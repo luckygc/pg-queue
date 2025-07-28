@@ -28,18 +28,18 @@ public class PgChannelListener {
     private final String jdbcUrl;
     private final String username;
     private final String password;
-    private final ListenerDispatcher listenerDispatcher;
+    private final MessageAvailableCallbackDispatcher messageAvailableCallbackDispatcher;
 
     private final AtomicBoolean runningFlag = new AtomicBoolean(false);
     private volatile @Nullable PgConnection con;
 
     public PgChannelListener(String channel, String jdbcUrl, String username, String password,
-            ListenerDispatcher listenerDispatcher) {
+            MessageAvailableCallbackDispatcher messageAvailableCallbackDispatcher) {
         this.channel = Objects.requireNonNull(channel);
         this.jdbcUrl = Objects.requireNonNull(jdbcUrl);
         this.username = Objects.requireNonNull(username);
         this.password = password;
-        this.listenerDispatcher = Objects.requireNonNull(listenerDispatcher);
+        this.messageAvailableCallbackDispatcher = Objects.requireNonNull(messageAvailableCallbackDispatcher);
     }
 
     public void startListen() throws SQLException {
@@ -76,7 +76,7 @@ public class PgChannelListener {
                     log.debug("收到消息, topic:{}, pid:{}", topic, pid);
 
                     try {
-                        listenerDispatcher.dispatch(topic);
+                        messageAvailableCallbackDispatcher.dispatch(topic);
                     } catch (Throwable t) {
                         log.error("调度队列监听器失败", t);
                     }
