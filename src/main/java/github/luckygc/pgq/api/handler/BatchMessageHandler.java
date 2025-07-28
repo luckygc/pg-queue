@@ -1,10 +1,11 @@
-package github.luckygc.pgq.api.support;
+package github.luckygc.pgq.api.handler;
 
 import github.luckygc.pgq.PgqConstants;
 import github.luckygc.pgq.api.ProcessingMessageManager;
 import github.luckygc.pgq.model.Message;
+import java.util.List;
 
-public interface SingleMessageHandler {
+public interface BatchMessageHandler {
 
     /**
      * 范围[1,5000]
@@ -22,5 +23,5 @@ public interface SingleMessageHandler {
 
     String topic();
 
-    void handle(ProcessingMessageManager processingMessageManager, Message message);
+    void handle(ProcessingMessageManager processingMessageManager, List<Message> messages);
 }

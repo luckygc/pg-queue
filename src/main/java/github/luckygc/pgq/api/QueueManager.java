@@ -1,7 +1,7 @@
 package github.luckygc.pgq.api;
 
-import github.luckygc.pgq.api.support.BatchMessageHandler;
-import github.luckygc.pgq.api.support.SingleMessageHandler;
+import github.luckygc.pgq.api.handler.BatchMessageHandler;
+import github.luckygc.pgq.api.handler.SingleMessageHandler;
 import java.sql.SQLException;
 import java.util.Map;
 
