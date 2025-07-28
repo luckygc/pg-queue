@@ -41,7 +41,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
                 .topic(topic)
                 .payload(message)
                 .build();
-        messageDao.insertMessage(messageDOObj);
+        messageDao.insertIntoPending(messageDOObj);
 
         messageAvailableCallbackDispatcher.dispatchCallback(topic);
         if (enablePgNotify) {
@@ -52,46 +52,46 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
     @Override
     public void send(String topic, String message, Duration processDelay) {
         MessageDO messageDOObj = MessageDO.of(topic, message, PgmqConstants.MESSAGE_PRIORITY);
-        messageDao.insertProcessLaterMessage(messageDOObj, processDelay);
+        messageDao.insertIntoInvisible(messageDOObj, processDelay);
     }
 
     @Override
     public void send(String message, int priority) {
         MessageDO messageDOObj = MessageDO.of(topic, message, priority);
-        messageDao.insertMessage(messageDOObj);
+        messageDao.insertIntoPending(messageDOObj);
         dispatchAndSendNotify();
     }
 
     @Override
     public void send(String message, Duration processDelay, int priority) {
         MessageDO messageDOObj = MessageDO.of(topic, message, priority);
-        messageDao.insertProcessLaterMessage(messageDOObj, processDelay);
+        messageDao.insertIntoInvisible(messageDOObj, processDelay);
     }
 
     @Override
     public void send(List<String> messages) {
         List<MessageDO> messageDOObjs = MessageDO.of(topic, messages, PgmqConstants.MESSAGE_PRIORITY);
-        messageDao.insertMessages(messageDOObjs);
+        messageDao.insertIntoPending(messageDOObjs);
         dispatchAndSendNotify();
     }
 
     @Override
     public void send(List<String> messages, Duration processDelay) {
         List<MessageDO> messageDOObjs = MessageDO.of(topic, messages, PgmqConstants.MESSAGE_PRIORITY);
-        messageDao.insertProcessLaterMessages(messageDOObjs, processDelay);
+        messageDao.insertIntoInvosible(messageDOObjs, processDelay);
     }
 
     @Override
     public void send(List<String> messages, int priority) {
         List<MessageDO> messageDOObjs = MessageDO.of(topic, messages, priority);
-        messageDao.insertMessages(messageDOObjs);
+        messageDao.insertIntoPending(messageDOObjs);
         dispatchAndSendNotify();
     }
 
     @Override
     public void send(List<String> messages, Duration processDelay, int priority) {
         List<MessageDO> messageDOObjs = MessageDO.of(topic, messages, priority);
-        messageDao.insertProcessLaterMessages(messageDOObjs, processDelay);
+        messageDao.insertIntoInvosible(messageDOObjs, processDelay);
     }
 
     private void dispatchAndSendNotify() {
