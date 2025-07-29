@@ -17,7 +17,7 @@ public class PgmqConstants {
     public static final int MAX_POLL = 50;
     public static final int MESSAGE_HANDLER_THREAD_COUNT = 1;
 
-    public static final int pgmq_ID = 199738;
+    public static final int PGMQ_ID = 199738;
     public static final int SCHEDULER_ID = 1;
     public static final String TOPIC_CHANNEL = "pgmq_topic_channel";
 }
