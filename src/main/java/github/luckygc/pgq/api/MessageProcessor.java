@@ -1,8 +1,8 @@
 package github.luckygc.pgq.api;
 
-import github.luckygc.pgq.tool.PgmqHandlerThreadFactory;
 import github.luckygc.pgq.api.handler.MessageHandler;
 import github.luckygc.pgq.model.Message;
+import github.luckygc.pgq.tool.PgmqHandlerThreadFactory;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;

@@ -1,7 +1,7 @@
 package github.luckygc.pgq.model;
 
-import github.luckygc.pgq.tool.Checker;
 import github.luckygc.pgq.dao.MessageDao;
+import github.luckygc.pgq.tool.Checker;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Objects;

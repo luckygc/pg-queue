@@ -1,22 +1,21 @@
 package github.luckygc.pgq.tool;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.assertThatCode;
+import org.junit.jupiter.api.Test;
 
 class CheckerTest {
 
     @Test
     void shouldNotThrowWhenMessagesIsNotEmpty() {
         List<String> messages = Arrays.asList("message1", "message2");
-        
+
         assertThatCode(() -> Checker.checkMessagesNotEmpty(messages))
                 .doesNotThrowAnyException();
     }
@@ -31,7 +30,7 @@ class CheckerTest {
     @Test
     void shouldThrowWhenMessagesIsEmpty() {
         List<String> emptyList = Collections.emptyList();
-        
+
         assertThatThrownBy(() -> Checker.checkMessagesNotEmpty(emptyList))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("messages不能为空");
@@ -40,7 +39,7 @@ class CheckerTest {
     @Test
     void shouldThrowWhenMessagesIsEmptyArrayList() {
         List<String> emptyList = new ArrayList<>();
-        
+
         assertThatThrownBy(() -> Checker.checkMessagesNotEmpty(emptyList))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("messages不能为空");
@@ -49,7 +48,7 @@ class CheckerTest {
     @Test
     void shouldNotThrowWhenDurationIsPositive() {
         Duration positiveDuration = Duration.ofSeconds(1);
-        
+
         assertThatCode(() -> Checker.checkDurationIsPositive(positiveDuration))
                 .doesNotThrowAnyException();
     }
@@ -57,7 +56,7 @@ class CheckerTest {
     @Test
     void shouldNotThrowWhenDurationIsLarge() {
         Duration largeDuration = Duration.ofDays(365);
-        
+
         assertThatCode(() -> Checker.checkDurationIsPositive(largeDuration))
                 .doesNotThrowAnyException();
     }
@@ -65,7 +64,7 @@ class CheckerTest {
     @Test
     void shouldThrowWhenDurationIsZero() {
         Duration zeroDuration = Duration.ZERO;
-        
+
         assertThatThrownBy(() -> Checker.checkDurationIsPositive(zeroDuration))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("duration必须大于0秒");
@@ -74,7 +73,7 @@ class CheckerTest {
     @Test
     void shouldThrowWhenDurationIsNegative() {
         Duration negativeDuration = Duration.ofSeconds(-1);
-        
+
         assertThatThrownBy(() -> Checker.checkDurationIsPositive(negativeDuration))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("duration必须大于0秒");
@@ -84,10 +83,10 @@ class CheckerTest {
     void shouldNotThrowWhenMaxPollIsInValidRange() {
         assertThatCode(() -> Checker.checkMaxPollRange(1))
                 .doesNotThrowAnyException();
-        
+
         assertThatCode(() -> Checker.checkMaxPollRange(50))
                 .doesNotThrowAnyException();
-        
+
         assertThatCode(() -> Checker.checkMaxPollRange(5000))
                 .doesNotThrowAnyException();
     }
@@ -125,13 +124,13 @@ class CheckerTest {
         // 测试边界值
         assertThatCode(() -> Checker.checkMaxPollRange(1))
                 .doesNotThrowAnyException();
-        
+
         assertThatCode(() -> Checker.checkMaxPollRange(5000))
                 .doesNotThrowAnyException();
-        
+
         assertThatThrownBy(() -> Checker.checkMaxPollRange(0))
                 .isInstanceOf(IllegalArgumentException.class);
-        
+
         assertThatThrownBy(() -> Checker.checkMaxPollRange(5001))
                 .isInstanceOf(IllegalArgumentException.class);
     }
@@ -139,7 +138,7 @@ class CheckerTest {
     @Test
     void shouldHandleMillisecondDuration() {
         Duration millisDuration = Duration.ofMillis(1);
-        
+
         assertThatCode(() -> Checker.checkDurationIsPositive(millisDuration))
                 .doesNotThrowAnyException();
     }
@@ -147,7 +146,7 @@ class CheckerTest {
     @Test
     void shouldHandleNanosecondDuration() {
         Duration nanosDuration = Duration.ofNanos(1);
-        
+
         assertThatCode(() -> Checker.checkDurationIsPositive(nanosDuration))
                 .doesNotThrowAnyException();
     }

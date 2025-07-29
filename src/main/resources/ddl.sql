@@ -116,42 +116,42 @@ drop function if exists pgmq_move_timeout_and_visible_msg_to_pending_then_notify
 -- 消息队列核心处理函数：将超时和可见的消息移动到待处理队列并发送通知
 -- 返回值：包含有消息可用的主题列表
 CREATE OR REPLACE FUNCTION pgmq_move_timeout_and_visible_msg_to_pending_then_notify()
-    RETURNS TABLE(_topic varchar(100))
+    RETURNS TABLE
+            (
+                _topic varchar(100)
+            )
     LANGUAGE plpgsql
-AS $$
+AS
+$$
 DECLARE
     rec RECORD;
 BEGIN
     -- 1. 事务级咨询锁，防止并发执行
     IF NOT pg_try_advisory_xact_lock(1997, 38) THEN
-        RETURN;  -- 拿不到锁就空返回
+        RETURN; -- 拿不到锁就空返回
     END IF;
 
     -- 2. 原子性删除 processing_queue/invisible_queue 并插入 pending_queue，
     --    同时通过 RETURNING 收集本次实际插入的 topic
     FOR rec IN
-        WITH
-            moved_processing AS (
-                DELETE FROM pgmq_processing_queue
-                    WHERE timeout_time <= now()
-                    RETURNING id, create_time, topic, priority, payload, attempt
-            ),
-            moved_visible AS (
-                DELETE FROM pgmq_invisible_queue
-                    WHERE visible_time <= now()
-                    RETURNING id, create_time, topic, priority, payload, attempt
-            ),
-            moved AS (
-                SELECT * FROM moved_processing
-                UNION ALL
-                SELECT * FROM moved_visible
-            ),
-            insert_op AS (
-                INSERT INTO pgmq_pending_queue (id, create_time, topic, priority, payload, attempt)
-                    SELECT id, create_time, topic, priority, payload, attempt
-                    FROM moved
-                    RETURNING topic
-            )
+        WITH moved_processing AS (
+            DELETE FROM pgmq_processing_queue
+                WHERE timeout_time <= now()
+                RETURNING id, create_time, topic, priority, payload, attempt),
+             moved_visible AS (
+                 DELETE FROM pgmq_invisible_queue
+                     WHERE visible_time <= now()
+                     RETURNING id, create_time, topic, priority, payload, attempt),
+             moved AS (SELECT *
+                       FROM moved_processing
+                       UNION ALL
+                       SELECT *
+                       FROM moved_visible),
+             insert_op AS (
+                 INSERT INTO pgmq_pending_queue (id, create_time, topic, priority, payload, attempt)
+                     SELECT id, create_time, topic, priority, payload, attempt
+                     FROM moved
+                     RETURNING topic)
         SELECT DISTINCT topic
         FROM insert_op
         LOOP

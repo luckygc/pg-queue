@@ -2,11 +2,8 @@ package github.luckygc.pgq;
 
 import github.luckygc.pgq.api.PgmqManager;
 import github.luckygc.pgq.api.handler.MessageHandler;
-import github.luckygc.pgq.impl.PgmqManagerImpl;
 import github.luckygc.pgq.model.Message;
-import java.sql.SQLException;
 import java.time.Duration;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 public class Demo {
 

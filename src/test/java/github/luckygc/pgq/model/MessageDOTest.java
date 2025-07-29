@@ -1,18 +1,17 @@
 package github.luckygc.pgq.model;
 
-import org.junit.jupiter.api.Test;
-
-import java.time.LocalDateTime;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.time.LocalDateTime;
+import org.junit.jupiter.api.Test;
 
 class MessageDOTest {
 
     @Test
     void shouldCreateMessageDOWithAllFields() {
         LocalDateTime createTime = LocalDateTime.now();
-        
+
         MessageDO messageDO = MessageDO.Builder.create()
                 .createTime(createTime)
                 .topic("test-topic")
@@ -31,7 +30,7 @@ class MessageDOTest {
     @Test
     void shouldUseCurrentTimeWhenCreateTimeIsNull() {
         LocalDateTime beforeCreation = LocalDateTime.now();
-        
+
         MessageDO messageDO = MessageDO.Builder.create()
                 .topic("test-topic")
                 .priority(5)
@@ -91,14 +90,14 @@ class MessageDOTest {
     @Test
     void shouldCreateBuilderWithStaticMethod() {
         MessageDO.Builder builder = MessageDO.Builder.create();
-        
+
         assertThat(builder).isNotNull();
     }
 
     @Test
     void shouldSupportMethodChaining() {
         LocalDateTime createTime = LocalDateTime.now();
-        
+
         MessageDO messageDO = MessageDO.Builder.create()
                 .createTime(createTime)
                 .topic("test-topic")

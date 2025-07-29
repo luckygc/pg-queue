@@ -42,7 +42,7 @@ class MessageProcessorTest {
         when(messageHandler.topic()).thenReturn("test-topic");
         when(messageHandler.maxPoll()).thenReturn(10);
         when(messageHandler.threadCount()).thenReturn(2);
-        
+
         messageProcessor = new MessageProcessor(messagePoller, messageHandler);
     }
 
@@ -66,7 +66,7 @@ class MessageProcessorTest {
     @Test
     void shouldThrowExceptionWhenTopicIsNull() {
         when(messageHandler.topic()).thenReturn(null);
-        
+
         assertThatThrownBy(() -> new MessageProcessor(messagePoller, messageHandler))
                 .isInstanceOf(NullPointerException.class);
     }
@@ -74,7 +74,7 @@ class MessageProcessorTest {
     @Test
     void shouldThrowExceptionWhenMaxPollIsZero() {
         when(messageHandler.maxPoll()).thenReturn(0);
-        
+
         assertThatThrownBy(() -> new MessageProcessor(messagePoller, messageHandler))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("maxPoll必须在1-5000之间");
@@ -83,7 +83,7 @@ class MessageProcessorTest {
     @Test
     void shouldThrowExceptionWhenMaxPollIsNegative() {
         when(messageHandler.maxPoll()).thenReturn(-1);
-        
+
         assertThatThrownBy(() -> new MessageProcessor(messagePoller, messageHandler))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("maxPoll必须在1-5000之间");
@@ -92,7 +92,7 @@ class MessageProcessorTest {
     @Test
     void shouldThrowExceptionWhenMaxPollIsTooLarge() {
         when(messageHandler.maxPoll()).thenReturn(5001);
-        
+
         assertThatThrownBy(() -> new MessageProcessor(messagePoller, messageHandler))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("maxPoll必须在1-5000之间");
@@ -101,7 +101,7 @@ class MessageProcessorTest {
     @Test
     void shouldThrowExceptionWhenThreadCountIsZero() {
         when(messageHandler.threadCount()).thenReturn(0);
-        
+
         assertThatThrownBy(() -> new MessageProcessor(messagePoller, messageHandler))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("threadCount必须在1-200之间");
@@ -110,7 +110,7 @@ class MessageProcessorTest {
     @Test
     void shouldThrowExceptionWhenThreadCountIsNegative() {
         when(messageHandler.threadCount()).thenReturn(-1);
-        
+
         assertThatThrownBy(() -> new MessageProcessor(messagePoller, messageHandler))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("threadCount必须在1-200之间");
@@ -119,7 +119,7 @@ class MessageProcessorTest {
     @Test
     void shouldThrowExceptionWhenThreadCountIsTooLarge() {
         when(messageHandler.threadCount()).thenReturn(201);
-        
+
         assertThatThrownBy(() -> new MessageProcessor(messagePoller, messageHandler))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("threadCount必须在1-200之间");
@@ -173,7 +173,7 @@ class MessageProcessorTest {
     @Test
     void shouldShutdownGracefully() {
         messageProcessor.shutdown();
-        
+
         // 验证线程池已关闭
         // 这里我们无法直接验证线程池状态，但可以确保方法调用不抛出异常
     }

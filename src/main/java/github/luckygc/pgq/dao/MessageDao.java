@@ -1,8 +1,8 @@
 package github.luckygc.pgq.dao;
 
-import github.luckygc.pgq.tool.Checker;
 import github.luckygc.pgq.model.Message;
 import github.luckygc.pgq.model.MessageDO;
+import github.luckygc.pgq.tool.Checker;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;

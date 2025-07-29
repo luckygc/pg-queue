@@ -1,21 +1,22 @@
 package github.luckygc.pgq.integration;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import github.luckygc.pgq.api.PgmqManager;
 import github.luckygc.pgq.api.handler.MessageHandler;
 import github.luckygc.pgq.impl.PgmqManagerImpl;
 import github.luckygc.pgq.model.Message;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class PgmqConcurrencyTest extends BaseIntegrationTest {
 
