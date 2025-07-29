@@ -52,8 +52,11 @@ public abstract class BaseIntegrationTest {
     @AfterEach
     void cleanUpData() {
         // 每个测试后清理数据，但保留表结构
-        jdbcTemplate.execute(
-                "TRUNCATE TABLE pgmq_pending_queue, pgmq_processing_queue, pgmq_invisible_queue, pgmq_dead_queue RESTART IDENTITY");
+        String sql = """
+                TRUNCATE TABLE pgmq_pending_queue, pgmq_processing_queue,
+                pgmq_invisible_queue, pgmq_dead_queue RESTART IDENTITY
+                """;
+        jdbcTemplate.execute(sql);
     }
 
     /**

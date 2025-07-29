@@ -30,8 +30,11 @@ class QueueDaoTest extends BaseIntegrationTest {
     void shouldMoveTimeoutProcessingMessagesToPending() {
         // 插入一条超时的处理中消息
         LocalDateTime timeoutTime = LocalDateTime.now().minusMinutes(1); // 1分钟前超时
-        jdbcTemplate.update(
-                "INSERT INTO pgmq_processing_queue (id, create_time, topic, priority, payload, attempt, timeout_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbcTemplate.update("""
+                        INSERT INTO pgmq_processing_queue
+                            (id, create_time, topic, priority, payload, attempt, timeout_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
                 1L, LocalDateTime.now(), "timeout-topic", 0, "timeout message", 0, timeoutTime
         );
 
@@ -60,8 +63,11 @@ class QueueDaoTest extends BaseIntegrationTest {
     void shouldMoveVisibleInvisibleMessagesToPending() {
         // 插入一条已到可见时间的不可见消息
         LocalDateTime visibleTime = LocalDateTime.now().minusMinutes(1); // 1分钟前就应该可见
-        jdbcTemplate.update(
-                "INSERT INTO pgmq_invisible_queue (id, create_time, topic, priority, payload, attempt, visible_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbcTemplate.update("""
+                        INSERT INTO pgmq_invisible_queue
+                            (id, create_time, topic, priority, payload, attempt, visible_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
                 2L, LocalDateTime.now(), "visible-topic", 0, "visible message", 0, visibleTime
         );
 
@@ -93,14 +99,20 @@ class QueueDaoTest extends BaseIntegrationTest {
         LocalDateTime visibleTime = LocalDateTime.now().minusMinutes(1);
 
         // 超时的处理中消息
-        jdbcTemplate.update(
-                "INSERT INTO pgmq_processing_queue (id, create_time, topic, priority, payload, attempt, timeout_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbcTemplate.update("""
+                        INSERT INTO pgmq_processing_queue
+                            (id, create_time, topic, priority, payload, attempt, timeout_time) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
                 1L, LocalDateTime.now(), "topic1", 0, "message1", 0, timeoutTime
         );
 
         // 可见的不可见消息
-        jdbcTemplate.update(
-                "INSERT INTO pgmq_invisible_queue (id, create_time, topic, priority, payload, attempt, visible_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbcTemplate.update("""
+                        INSERT INTO pgmq_invisible_queue
+                            (id, create_time, topic, priority, payload, attempt, visible_time) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
                 2L, LocalDateTime.now(), "topic2", 0, "message2", 0, visibleTime
         );
 
@@ -113,8 +125,11 @@ class QueueDaoTest extends BaseIntegrationTest {
     void shouldNotMoveNonTimeoutProcessingMessages() {
         // 插入一条未超时的处理中消息
         LocalDateTime futureTimeoutTime = LocalDateTime.now().plusMinutes(30);
-        jdbcTemplate.update(
-                "INSERT INTO pgmq_processing_queue (id, create_time, topic, priority, payload, attempt, timeout_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbcTemplate.update("""
+                        INSERT INTO pgmq_processing_queue
+                            (id, create_time, topic, priority, payload, attempt, timeout_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
                 1L, LocalDateTime.now(), "future-topic", 0, "future message", 0, futureTimeoutTime
         );
 
@@ -136,8 +151,11 @@ class QueueDaoTest extends BaseIntegrationTest {
     void shouldNotMoveNonVisibleInvisibleMessages() {
         // 插入一条未到可见时间的不可见消息
         LocalDateTime futureVisibleTime = LocalDateTime.now().plusMinutes(30);
-        jdbcTemplate.update(
-                "INSERT INTO pgmq_invisible_queue (id, create_time, topic, priority, payload, attempt, visible_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbcTemplate.update("""
+                        INSERT INTO pgmq_invisible_queue
+                            (id, create_time, topic, priority, payload, attempt, visible_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
                 2L, LocalDateTime.now(), "future-visible-topic", 0, "future visible message", 0, futureVisibleTime
         );
 
@@ -162,8 +180,11 @@ class QueueDaoTest extends BaseIntegrationTest {
 
         // 插入一条超时消息
         LocalDateTime timeoutTime = LocalDateTime.now().minusMinutes(1);
-        jdbcTemplate.update(
-                "INSERT INTO pgmq_processing_queue (id, create_time, topic, priority, payload, attempt, timeout_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbcTemplate.update("""
+                        INSERT INTO pgmq_processing_queue
+                            (id, create_time, topic, priority, payload, attempt, timeout_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
                 1L, LocalDateTime.now(), "concurrent-topic", 0, "concurrent message", 0, timeoutTime
         );
 
