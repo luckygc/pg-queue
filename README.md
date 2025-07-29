@@ -45,12 +45,6 @@
 
 ```java
 // 创建队列管理器
-QueueManager queueManager = new QueueManagerImpl(
-    new JdbcTemplate(dataSource),
-    new TransactionTemplate(transactionManager)
-);
-
-// 使用PgmqManager（推荐方式）
 PgmqManager pgmqManager = new PgmqManagerImpl(jdbcTemplate);
 
 // 发送普通消息
@@ -98,10 +92,8 @@ MessageHandler handler = new MessageHandler() {
     }
 };
 
-// 注册处理器并启动
-PgmqManager pgmqManager = new PgmqManagerImpl(jdbcTemplate);
+// 注册处理器
 pgmqManager.registerHandler(handler);
-pgmqManager.start();
 ```
 
 ### 5. 手动拉取消息
@@ -118,14 +110,14 @@ if (message != null) {
 
 ## Spring Boot集成
 
-### 1. 启用自动配置
+### 1. 注册
 
 ```java
 @Configuration
 public class PgmqConfig {
 
     @Bean
-    public void pgmqManager(JdbcTemplate jdbcTemplate){
+    public PgmqManager pgmqManager(JdbcTemplate jdbcTemplate){
        return new PgmqManagerImpl(jdbcTemplate);
     }
 }
@@ -140,14 +132,14 @@ public class PgmqConfig {
 public class OrderService {
 
     @Autowired
-    private QueueManager queueManager;
+    private PgmqManager pgmqManager;
 
     public void createOrder(Order order) {
         // 业务逻辑
         saveOrder(order);
 
         // 发送消息（自动参与事务）
-        queueManager.send("order", order.toJsonString());
+        pgmqManager.send("order", order.toJsonString());
     }
 }
 ```
