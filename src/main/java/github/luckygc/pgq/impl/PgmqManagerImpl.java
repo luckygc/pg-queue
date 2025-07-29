@@ -116,6 +116,6 @@ public class PgmqManagerImpl implements PgmqManager {
 
     @Override
     public void unregisterHandler(MessageHandler messageHandler) {
-
+        dispatcher.unregister(messageHandler.topic());
     }
 }
