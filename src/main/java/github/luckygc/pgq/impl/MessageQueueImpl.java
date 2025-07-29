@@ -1,12 +1,12 @@
 package github.luckygc.pgq.impl;
 
+import github.luckygc.pgq.MessageProcessorDispatcher;
 import github.luckygc.pgq.PgNotifier;
 import github.luckygc.pgq.PgmqConstants;
 import github.luckygc.pgq.Utils;
 import github.luckygc.pgq.api.DelayMessageQueue;
 import github.luckygc.pgq.api.MessageQueue;
 import github.luckygc.pgq.api.PriorityMessageQueue;
-import github.luckygc.pgq.api.callback.MessageAvailableCallback;
 import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.model.Message;
 import github.luckygc.pgq.model.MessageDO;
@@ -22,12 +22,12 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
 
 
     private final MessageDao messageDao;
-    private final MessageAvailableCallback callback;
+    private final MessageProcessorDispatcher dispatcher;
     private final @Nullable PgNotifier pgNotifier;
 
-    public MessageQueueImpl(MessageDao messageDao, MessageAvailableCallback callback, @Nullable PgNotifier pgNotifier) {
+    public MessageQueueImpl(MessageDao messageDao, MessageProcessorDispatcher dispatcher, @Nullable PgNotifier pgNotifier) {
         this.messageDao = Objects.requireNonNull(messageDao);
-        this.callback = Objects.requireNonNull(callback);
+        this.dispatcher = Objects.requireNonNull(dispatcher);
         this.pgNotifier = pgNotifier;
     }
 
@@ -45,7 +45,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
             pgNotifier.sendNotify(topic);
         }
 
-        callback.onMessageAvailable(topic);
+        dispatcher.dispatch(topic);
     }
 
     @Override
@@ -76,7 +76,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
             pgNotifier.sendNotify(topic);
         }
 
-        callback.onMessageAvailable(topic);
+        dispatcher.dispatch(topic);
     }
 
     @Override
@@ -100,7 +100,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
             pgNotifier.sendNotify(topic);
         }
 
-        callback.onMessageAvailable(topic);
+        dispatcher.dispatch(topic);
     }
 
     @Override
@@ -140,7 +140,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
             pgNotifier.sendNotify(topic);
         }
 
-        callback.onMessageAvailable(topic);
+        dispatcher.dispatch(topic);
     }
 
     @Override

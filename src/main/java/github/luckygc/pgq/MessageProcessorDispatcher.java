@@ -1,20 +1,14 @@
 package github.luckygc.pgq;
 
 import github.luckygc.pgq.api.MessageProcessor;
-import github.luckygc.pgq.api.callback.MessageAvailableCallback;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-public class MessageProcessorDispatcher implements MessageAvailableCallback {
+public class MessageProcessorDispatcher {
 
     private final Map<String, MessageProcessor> processorMap = new ConcurrentHashMap<>();
-
-    @Override
-    public void onMessageAvailable(String topic) {
-        dispatchProcessor(topic);
-    }
 
     public void register(MessageProcessor messageProcessor) {
         String topic = messageProcessor.topic();
@@ -23,7 +17,7 @@ public class MessageProcessorDispatcher implements MessageAvailableCallback {
         }
     }
 
-    public void dispatchProcessor(String topic) {
+    public void dispatch(String topic) {
         MessageProcessor messageProcessor = processorMap.get(topic);
         if (messageProcessor == null) {
             return;
@@ -34,11 +28,17 @@ public class MessageProcessorDispatcher implements MessageAvailableCallback {
 
                 @Override
                 public void afterCommit() {
-                    messageProcessor.process();
+                    messageProcessor.asyncProcess();
                 }
             });
         } else {
-            messageProcessor.process();
+            messageProcessor.asyncProcess();
+        }
+    }
+
+    public void shutdown() {
+        for (MessageProcessor processor : processorMap.values()) {
+            processor.shutdown();
         }
     }
 }

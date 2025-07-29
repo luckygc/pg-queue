@@ -6,10 +6,10 @@ import github.luckygc.pgq.PgListener;
 import github.luckygc.pgq.PgNotifier;
 import github.luckygc.pgq.PgmqConstants;
 import github.luckygc.pgq.api.DelayMessageQueue;
+import github.luckygc.pgq.api.MessageProcessor;
 import github.luckygc.pgq.api.MessageQueue;
 import github.luckygc.pgq.api.PgmqManager;
 import github.luckygc.pgq.api.PriorityMessageQueue;
-import github.luckygc.pgq.api.callback.MessageAvailableCallback;
 import github.luckygc.pgq.api.handler.MessageHandler;
 import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.dao.QueueDao;
@@ -30,6 +30,7 @@ public class PgmqManagerImpl implements PgmqManager {
 
     private final QueueDao queueDao;
     private final MessageQueueImpl messageQueue;
+    private final MessageProcessorDispatcher dispatcher;
 
     @Nullable
     private final PgNotifier pgNotifier;
@@ -45,8 +46,7 @@ public class PgmqManagerImpl implements PgmqManager {
     public PgmqManagerImpl(JdbcTemplate jdbcTemplate, String jdbcUrl, String username, String password) {
         this.queueDao = new QueueDao(jdbcTemplate);
 
-
-        MessageAvailableCallback callback = new MessageProcessorDispatcher();
+        this.dispatcher = new MessageProcessorDispatcher();
 
         if (jdbcUrl == null) {
             this.pgNotifier = null;
@@ -54,11 +54,11 @@ public class PgmqManagerImpl implements PgmqManager {
         } else {
             Objects.requireNonNull(username);
             this.pgNotifier = new PgNotifier(queueDao);
-            this.pgListener = new PgListener(PgmqConstants.TOPIC_CHANNEL, jdbcUrl, username, password, callbacks);
+            this.pgListener = new PgListener(PgmqConstants.TOPIC_CHANNEL, jdbcUrl, username, password, callback);
         }
 
         MessageDao messageDao = new MessageDao(jdbcTemplate);
-        this.messageQueue = new MessageQueueImpl(messageDao, callback, pgNotifier);
+        this.messageQueue = new MessageQueueImpl(messageDao, dispatcher, pgNotifier);
     }
 
     @Override
@@ -113,8 +113,8 @@ public class PgmqManagerImpl implements PgmqManager {
 
     @Override
     public void registerHandler(MessageHandler messageHandler) {
-        AsyncMessageProcessor asyncMessageProcessor = new AsyncMessageProcessor(messageQueue, messageHandler);
-        messageProcessorDispatcher.register(asyncMessageProcessor);
+        AsyncMessageProcessor asyncMessageProcessor = new MessageProcessor(, messageHandler);
+        dispatcher.register(asyncMessageProcessor);
     }
 
     @Override

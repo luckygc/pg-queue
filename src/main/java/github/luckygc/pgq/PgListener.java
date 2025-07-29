@@ -36,7 +36,7 @@ public class PgListener {
     private volatile @Nullable PgConnection con;
 
     public PgListener(String channel, String jdbcUrl, String username, String password,
-            MessageAvailableCallback callback) {
+            MessageProcessorDispatcher callback) {
         this.channel = Objects.requireNonNull(channel);
         this.jdbcUrl = Objects.requireNonNull(jdbcUrl);
         this.username = Objects.requireNonNull(username);
