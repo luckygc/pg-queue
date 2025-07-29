@@ -25,7 +25,8 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
     private final MessageProcessorDispatcher dispatcher;
     private final @Nullable PgNotifier pgNotifier;
 
-    public MessageQueueImpl(MessageDao messageDao, MessageProcessorDispatcher dispatcher, @Nullable PgNotifier pgNotifier) {
+    public MessageQueueImpl(MessageDao messageDao, MessageProcessorDispatcher dispatcher,
+            @Nullable PgNotifier pgNotifier) {
         this.messageDao = Objects.requireNonNull(messageDao);
         this.dispatcher = Objects.requireNonNull(dispatcher);
         this.pgNotifier = pgNotifier;

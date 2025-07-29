@@ -1,10 +1,7 @@
 package github.luckygc.pgq;
 
-import github.luckygc.pgq.model.Message;
-import github.luckygc.pgq.model.MessageDO;
 import java.time.Duration;
 import java.util.List;
-import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 public class Utils {

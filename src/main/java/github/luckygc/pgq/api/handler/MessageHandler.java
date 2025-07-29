@@ -2,7 +2,6 @@ package github.luckygc.pgq.api.handler;
 
 import github.luckygc.pgq.PgmqConstants;
 import github.luckygc.pgq.model.Message;
-import github.luckygc.pgq.model.MessageDO;
 
 public interface MessageHandler {
 
