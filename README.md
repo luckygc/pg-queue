@@ -1,39 +1,45 @@
 # pg-queue
 
-基于PostgreSQL的消息队列库，支持延时消息、优先级队列、重试机制。
+基于PostgreSQL的轻量级消息队列库，提供延时消息、优先级队列和重试机制。支持集群
 
 ## 特性
 
-- **可靠性**: 自动参与spring事务，实现outbox模式，保证消息投递。使用数据库保持消息持久性
-- **延时消息**: 支持指定延时时间的消息处理,误差一分钟
+- **持久化存储**: 使用PostgreSQL数据库存储消息，保证消息不丢失
+- **延时消息**: 支持指定延时时间的消息处理，通过定时任务实现（1分钟间隔）
 - **优先级队列**: 支持消息优先级，高优先级消息优先处理
-- **重试机制**: 支持消息处理失败延时重试
-- **死信队列**: 支持手动移动消息到死信队列
-- **集群**: 可选的PostgreSQL NOTIFY机制，实现单机发送消息，集群所有机器都能收到消息可用通知
-- **批处理**: push/pull以及消息处理均支持批量操作
+- **重试机制**: 支持消息处理失败后的延时重试
+- **死信队列**: 支持将处理失败的消息移动到死信队列
+- **集群支持**: 可选的PostgreSQL NOTIFY机制，支持集群环境下的消息通知
+- **批量操作**: 支持批量发送和拉取消息
+
+## 环境要求
+
+- Java 17+
+- PostgreSQL 9.5+
+- Spring jdbc
 
 ## 快速开始
 
 ### 1. 添加依赖
 
 ```xml
-
 <repositories>
     <repository>
         <id>jitpack.io</id>
         <url>https://jitpack.io</url>
     </repository>
 </repositories>
+
 <dependency>
-<groupId>com.github.luckygc</groupId>
-<artifactId>pg-queue</artifactId>
-<version>1.1.0</version>
+    <groupId>com.github.luckygc</groupId>
+    <artifactId>pg-queue</artifactId>
+    <version>1.1.0</version>
 </dependency>
 ```
 
 ### 2. 创建数据库表
 
-执行 `src/main/resources/ddl.sql` 中的SQL语句创建必要的数据库表。
+执行 `src/main/resources/ddl.sql` 中的SQL语句创建必要的数据库表和函数：
 
 ### 3. 基础使用
 
@@ -44,168 +50,230 @@ QueueManager queueManager = new QueueManagerImpl(
     new TransactionTemplate(transactionManager)
 );
 
-// 发送消息
-queueManager.queue("order").push("{\"orderId\": 123}");
+// 使用PgmqManager（推荐方式）
+PgmqManager pgmqManager = new PgmqManagerImpl(jdbcTemplate);
 
-// 发送延时消息
-queueManager.queue("order").push("{\"orderId\": 124}", Duration.ofMinutes(5));
+// 发送普通消息
+pgmqManager.queue().send("order", "{\"orderId\": 123}");
+
+// 发送延时消息（5分钟后处理）
+pgmqManager.delayQueue().send("order", "{\"orderId\": 124}", Duration.ofMinutes(5));
 
 // 发送优先级消息
-queueManager.queue("order").push("{\"orderId\": 125}", 10);
+pgmqManager.priorityQueue().send("order", "{\"orderId\": 125}", 10);
 ```
 
 ### 4. 消息处理
 
 ```java
-// 单消息处理器
-SingleMessageHandler handler = new SingleMessageHandler() {
+// 实现消息处理器
+MessageHandler handler = new MessageHandler() {
     @Override
     public String topic() {
         return "order";
     }
-    
+
     @Override
     public int threadCount() {
-        return 8; // 处理线程数
+        return 8; // 处理线程数，默认为1
     }
-    
+
     @Override
-    public void handle(ProcessingMessageManager manager, Message messageDO) {
+    public void handle(Message message) {
         try {
             // 处理消息逻辑
-            processOrder(messageDO.getPayload());
-            manager.delete(messageDO); // 处理成功，删除消息
+            processOrder(message.getPayload());
+            message.delete(); // 处理成功，删除消息
         } catch (RetryableException e) {
-            // 可重试异常，重试处理
-            if (messageDO.getAttempt() >= 3) {
-                manager.dead(messageDO); // 超过重试次数，进入死信队列
+            // 可重试异常
+            if (message.getAttempt() >= 3) {
+                message.dead(); // 超过重试次数，进入死信队列
             } else {
-                manager.retry(messageDO, Duration.ofMinutes(10)); // 10分钟后重试
+                message.retry(Duration.ofMinutes(10)); // 10分钟后重试
             }
         } catch (Exception e) {
             // 不可重试异常，直接进入死信队列
-            manager.dead(messageDO);
+            message.dead();
         }
     }
 };
 
-// 注册处理器
-queueManager.registerMessageHandler(handler);
-
-// 启动队列管理器
-queueManager.start();
-```
-也可以手动pull消息然后处理
-
-## API参考
-
-### QueueManager
-
-队列管理器，负责队列创建、消息处理器注册和生命周期管理。
-
-```java
-// 获取指定主题的队列
-DatabaseQueue queue(String topic);
-
-// 注册单消息处理器
-void registerMessageHandler(SingleMessageHandler handler);
-
-// 注册批量消息处理器  
-void registerMessageHandler(BatchMessageHandler handler);
-
-// 启动队列管理器
-void start(long loopIntervalSeconds);
-
-// 停止队列管理器
-void stop();
-
-// 获取线程池状态
-Map<String, String> getThreadPoolStatus();
+// 注册处理器并启动
+PgmqManager pgmqManager = new PgmqManagerImpl(jdbcTemplate);
+pgmqManager.registerHandler(handler);
+pgmqManager.start();
 ```
 
-### DatabaseQueue
-
-数据库队列，提供消息的发送和拉取功能。
+### 5. 手动拉取消息
 
 ```java
-// 发送消息
-void push(String messageDO);
-void push(String messageDO, Duration processDelay);
-void push(String messageDO, int priority);
-void push(List<String> messageDOS);
-
-// 拉取消息
-Message pull();
-Message pull(Duration processTimeout);
-List<Message> pull(int pullCount);
+// 手动拉取单条消息
+Message message = pgmqManager.queue().poll("order");
+if (message != null) {
+    // 处理消息
+    processOrder(message.getPayload());
+    message.delete();
+}
 ```
 
-### ProcessingMessageManager
+## Spring Boot集成
 
-消息处理管理器，用于处理消息的状态变更。
+### 1. 启用自动配置
 
 ```java
-// 删除消息（处理成功）
-void delete(Message messageDO);
+@Configuration
+public class PgmqConfig {
 
-// 完成消息（保留记录）
-void complete(Message messageDO);
+    @Bean
+    public void pgmqManager(JdbcTemplate jdbcTemplate){
+       return new PgmqManagerImpl(jdbcTemplate);
+    }
+}
+```
 
-// 重试消息
-void retry(Message messageDO, Duration retryDelay);
+### 2. 注入使用
 
-// 进入死信队列
-void dead(Message messageDO);
+简单使用
+
+```java
+@Service
+public class OrderService {
+
+    @Autowired
+    private QueueManager queueManager;
+
+    public void createOrder(Order order) {
+        // 业务逻辑
+        saveOrder(order);
+
+        // 发送消息（自动参与事务）
+        queueManager.send("order", order.toJsonString());
+    }
+}
+```
+
+其他用法
+
+```java
+public class Demo {
+
+    private PgmqManager pgmqManager;
+
+    void demo() {
+        pgmqManager.registerHandler(new TestMessageHandler());
+        pgmqManager.registerHandler(new Test2MessageHandler());
+
+        try {
+            pgmqManager.start();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        pgmqManager.queue().send("test", "hello");
+        pgmqManager.queue().send("test2", "hello");
+        pgmqManager.delayQueue().send("test", "hello2", Duration.ofMinutes(15));
+        pgmqManager.priorityQueue().send("test2", "hello3", 2);
+
+        pgmqManager.queue().send("test3", "xxx");
+        Message message = pgmqManager.queue().poll("test3");
+        if (message != null) {
+            message.delete();
+        }
+    }
+
+    static class TestMessageHandler implements MessageHandler {
+
+        @Override
+        public String topic() {
+            return "test";
+        }
+
+        @Override
+        public void handle(Message message) {
+            try {
+                String payload = message.getPayload();
+                // handle
+                message.delete();
+            } catch (IllegalStateException e) {
+                if (message.getAttempt() >= 3) {
+                    message.dead();
+                } else {
+                    message.retry(Duration.ofMinutes(10));
+                }
+            } catch (Exception e) {
+                message.dead();
+            }
+        }
+    }
+
+    static class Test2MessageHandler implements MessageHandler {
+
+        @Override
+        public String topic() {
+            return "test2";
+        }
+
+        @Override
+        public int threadCount() {
+            int cpuCores = Runtime.getRuntime().availableProcessors();
+            return cpuCores * 2 + 1;
+        }
+
+        @Override
+        public void handle(Message message) {
+            try {
+                String payload = message.getPayload();
+                // handle
+                message.delete();
+            } catch (IllegalStateException e) {
+                if (message.getAttempt() >= 3) {
+                    message.dead();
+                } else {
+                    message.retry(Duration.ofDays(1));
+                }
+            } catch (Exception e) {
+                message.dead();
+            }
+        }
+    }
+}
 ```
 
 ## 高级配置
 
 ### 启用PostgreSQL NOTIFY
 
+启用NOTIFY机制可以在集群环境下实现实时消息通知：
+
 ```java
-QueueManager queueManager = new QueueManagerImpl(
+// 创建支持NOTIFY的管理器
+PgmqManager pgmqManager = new PgmqManagerImpl(
     jdbcTemplate,
-    transactionTemplate,
     "jdbc:postgresql://localhost:5432/mydb", // 数据库连接URL
     "username",
     "password"
 );
 ```
 
-启用NOTIFY后，集群其他机器也可以实时收到消息可用通知。
-
-### 批量消息处理
-
-```java
-BatchMessageHandler batchHandler = new BatchMessageHandler() {
-    @Override
-    public String topic() {
-        return "batch-order";
-    }
-    
-    @Override
-    public int pullCount() {
-        return 100; // 每次拉取100条消息
-    }
-    
-    @Override
-    public void handle(ProcessingMessageManager manager, List<Message> messageDOS) {
-        // 批量处理逻辑
-        processBatchOrders(messageDOS);
-        
-        // 批量删除
-        manager.delete(messageDOS);
-    }
-};
-```
+启用NOTIFY后，当有新消息时，集群中的所有节点都能实时收到通知。
 
 ## 数据库表结构
 
-- `pgq_pending_queue`: 待处理消息队列
-- `pgq_invisible_queue`: 延时消息队列  
-- `pgq_processing_queue`: 处理中消息队列
-- `pgq_complete_queue`: 已完成消息队列
-- `pgq_dead_queue`: 死信消息队列
+项目使用4个核心表来管理消息的生命周期：
+
+- `pgmq_pending_queue`: 待处理消息队列
+- `pgmq_invisible_queue`: 延时消息队列（未到处理时间）
+- `pgmq_processing_queue`: 处理中消息队列（已被消费者拉取）
+- `pgmq_dead_queue`: 死信消息队列（处理失败的消息）
+
+每个表都使用统一的序列`pgmq_message_seq`生成唯一ID，确保消息在不同状态间流转时保持一致性。
+
+## 工作原理
+
+1. **消息发送**: 普通消息直接进入`pending_queue`，延时消息进入`invisible_queue`
+2. **定时调度**: 每分钟执行一次定时任务，将到期的延时消息和超时的处理中消息移回`pending_queue`
+3. **消息消费**: 消费者从`pending_queue`拉取消息，消息移入`processing_queue`
+4. **消息处理**: 处理成功删除消息，处理失败可重试或移入死信队列
 
 ## 许可证
 

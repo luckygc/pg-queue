@@ -1,9 +1,5 @@
 package github.luckygc.pgq.impl;
 
-import github.luckygc.pgq.tool.MessageProcessorDispatcher;
-import github.luckygc.pgq.tool.PgListener;
-import github.luckygc.pgq.tool.PgNotifier;
-import github.luckygc.pgq.model.PgmqConstants;
 import github.luckygc.pgq.api.DelayMessageQueue;
 import github.luckygc.pgq.api.MessageProcessor;
 import github.luckygc.pgq.api.MessageQueue;
@@ -12,6 +8,10 @@ import github.luckygc.pgq.api.PriorityMessageQueue;
 import github.luckygc.pgq.api.handler.MessageHandler;
 import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.dao.QueueDao;
+import github.luckygc.pgq.model.PgmqConstants;
+import github.luckygc.pgq.tool.MessageProcessorDispatcher;
+import github.luckygc.pgq.tool.PgListener;
+import github.luckygc.pgq.tool.PgNotifier;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
@@ -36,7 +36,7 @@ public class PgmqManagerImpl implements PgmqManager {
     @Nullable
     private final PgListener pgListener;
 
-    private ScheduledExecutorService scheduler;
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     public PgmqManagerImpl(JdbcTemplate jdbcTemplate) {
         this(jdbcTemplate, null, null, null);
@@ -54,22 +54,17 @@ public class PgmqManagerImpl implements PgmqManager {
             Objects.requireNonNull(username);
             this.pgNotifier = new PgNotifier(queueDao);
             this.pgListener = new PgListener(PgmqConstants.TOPIC_CHANNEL, jdbcUrl, username, password, dispatcher);
+            try {
+                this.pgListener.startListen();
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         MessageDao messageDao = new MessageDao(jdbcTemplate);
         this.messageQueue = new MessageQueueImpl(messageDao, dispatcher, pgNotifier);
-    }
 
-    @Override
-    public void start() throws SQLException {
-        if (pgListener != null) {
-            pgListener.startListen();
-        }
-
-        scheduler = Executors.newSingleThreadScheduledExecutor();
         scheduler.scheduleWithFixedDelay(this::schedule, 0, 1, TimeUnit.MINUTES);
-
-        log.debug("启动pgq成功");
     }
 
     private void schedule() {
@@ -79,20 +74,23 @@ public class PgmqManagerImpl implements PgmqManager {
         }
 
         if (pgNotifier != null) {
-            pgNotifier.sendNotify(topics);
+            queueDao.sendNotify(topics);
+        }
+
+        for (String topic : topics) {
+            dispatcher.dispatch(topic);
         }
     }
 
     @Override
-    public void stop() {
+    public void shutdown() {
         if (pgListener != null) {
             pgListener.stopListen();
         }
 
         scheduler.shutdownNow();
-        scheduler = null;
-
-        log.debug("停止pgq成功");
+        dispatcher.shutdown();
+        log.info("pgmq已停止");
     }
 
     @Override

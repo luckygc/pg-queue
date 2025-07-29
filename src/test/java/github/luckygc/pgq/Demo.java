@@ -10,18 +10,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 public class Demo {
 
-    void demo() {
-        JdbcTemplate jdbcTemplate = new JdbcTemplate();
-        PgmqManager pgmqManager = new PgmqManagerImpl(jdbcTemplate);
+    private PgmqManager pgmqManager;
 
+    void demo() {
         pgmqManager.registerHandler(new TestMessageHandler());
         pgmqManager.registerHandler(new Test2MessageHandler());
-
-        try {
-            pgmqManager.start();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
 
         pgmqManager.queue().send("test", "hello");
         pgmqManager.queue().send("test2", "hello");
