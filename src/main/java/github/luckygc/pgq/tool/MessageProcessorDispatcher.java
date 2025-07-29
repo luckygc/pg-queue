@@ -2,6 +2,7 @@ package github.luckygc.pgq.tool;
 
 import github.luckygc.pgq.api.MessageProcessor;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,8 @@ public class MessageProcessorDispatcher {
     }
 
     public void dispatch(String topic) {
+        Objects.requireNonNull(topic);
+
         MessageProcessor messageProcessor = processorMap.get(topic);
         if (messageProcessor == null) {
             return;
