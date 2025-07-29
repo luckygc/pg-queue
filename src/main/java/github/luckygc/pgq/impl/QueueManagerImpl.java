@@ -1,7 +1,7 @@
 package github.luckygc.pgq.impl;
 
-import github.luckygc.pgq.MessageProcessor;
-import github.luckygc.pgq.MessageAvailableCallbackDispatcher;
+import github.luckygc.pgq.AsyncMessageProcessor;
+import github.luckygc.pgq.MessageProcessorDispatcher;
 import github.luckygc.pgq.PgChannelListener;
 import github.luckygc.pgq.PgmqConstants;
 import github.luckygc.pgq.SingleMessageAvailableCallBackImpl;
@@ -12,7 +12,7 @@ import github.luckygc.pgq.api.manager.MessageManager;
 import github.luckygc.pgq.api.manager.QueueManager;
 import github.luckygc.pgq.api.handler.SingleMessageHandler;
 import github.luckygc.pgq.dao.MessageDao;
-import github.luckygc.pgq.dao.QueueManagerDao;
+import github.luckygc.pgq.dao.QueueDao;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -26,14 +26,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
-public class QueueManagerImpl implements QueueManager {
+public class QueueManagerImpl {
 
     private static final Logger log = LoggerFactory.getLogger(QueueManagerImpl.class);
 
     private final Map<String, MessageQueue> queueMap = new ConcurrentHashMap<>();
 
-    private final MessageAvailableCallbackDispatcher messageAvailableCallbackDispatcher;
-    private final QueueManagerDao queueManagerDao;
+    private final MessageProcessorDispatcher messageProcessorDispatcher;
+    private final QueueDao queueDao;
     private final MessageDao messageDao;
     private final MessageManager messageManager;
     private final DeadMessageManager deadMessageManager;
@@ -42,10 +42,10 @@ public class QueueManagerImpl implements QueueManager {
     private final boolean enablePgNotify;
     private PgChannelListener pgChannelListener;
 
-    public QueueManagerImpl(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate) {
-        this.messageAvailableCallbackDispatcher = new MessageAvailableCallbackDispatcher();
-        this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
-        this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
+    public QueueManagerImpl(JdbcTemplate jdbcTemplate) {
+        this.messageProcessorDispatcher = new MessageProcessorDispatcher();
+        this.queueDao = new QueueDao(jdbcTemplate);
+        this.messageDao = new MessageDao(jdbcTemplate);
         MessageDao messageDao = new MessageDao(jdbcTemplate);
         this.messageManager = new MessageManagerImpl(messageDao);
         this.deadMessageManager = new DeadMessageManagerImpl(messageDao);
@@ -54,15 +54,15 @@ public class QueueManagerImpl implements QueueManager {
 
     public QueueManagerImpl(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate, String jdbcUrl,
             String username, String password) {
-        this.messageAvailableCallbackDispatcher = new MessageAvailableCallbackDispatcher();
-        this.queueManagerDao = new QueueManagerDao(jdbcTemplate, transactionTemplate);
+        this.messageProcessorDispatcher = new MessageProcessorDispatcher();
+        this.queueDao = new QueueDao(jdbcTemplate, transactionTemplate);
         this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
         MessageDao messageDao = new MessageDao(jdbcTemplate);
         this.messageManager = new MessageManagerImpl(messageDao);
         this.deadMessageManager = new DeadMessageManagerImpl(messageDao);
         this.enablePgNotify = true;
         this.pgChannelListener = new PgChannelListener(PgmqConstants.TOPIC_CHANNEL, Objects.requireNonNull(jdbcUrl),
-                Objects.requireNonNull(username), password, messageAvailableCallbackDispatcher);
+                Objects.requireNonNull(username), password, messageProcessorDispatcher);
     }
 
     @Override
@@ -73,10 +73,10 @@ public class QueueManagerImpl implements QueueManager {
             }
 
             if (enablePgNotify) {
-                return new MessageQueueImpl(messageDao, k, messageAvailableCallbackDispatcher, queueManagerDao);
+                return new MessageQueueImpl(messageDao, k, messageProcessorDispatcher, queueDao);
             }
 
-            return new MessageQueueImpl(messageDao, k, messageAvailableCallbackDispatcher);
+            return new MessageQueueImpl(messageDao, k, messageProcessorDispatcher);
         });
     }
 
@@ -84,14 +84,14 @@ public class QueueManagerImpl implements QueueManager {
     public void registerMessageHandler(SingleMessageHandler messageHandler) {
         MessageQueue queue = queue(messageHandler.topic());
         SingleMessageAvailableCallBackImpl processor = new SingleMessageAvailableCallBackImpl(queue, messageManager, messageHandler);
-        messageAvailableCallbackDispatcher.register(processor);
+        messageProcessorDispatcher.register(processor);
     }
 
     @Override
     public void registerMessageHandler(BatchMessageHandler messageHandler) {
         MessageQueue queue = queue(messageHandler.topic());
-        MessageProcessor processor = new MessageProcessor(queue, messageManager, messageHandler);
-        messageAvailableCallbackDispatcher.register(processor);
+        AsyncMessageProcessor processor = new AsyncMessageProcessor(queue, messageManager, messageHandler);
+        messageProcessorDispatcher.register(processor);
     }
 
     @Override
@@ -122,15 +122,15 @@ public class QueueManagerImpl implements QueueManager {
     }
 
     private void schedule() {
-        List<String> topics = queueManagerDao.moveTimeoutAndVisibleMsgToPendingAndReturnMsgAvailableTopics();
+        List<String> topics = queueDao.moveTimeoutAndVisibleMsgToPendingAndReturnMsgAvailableTopics();
         if (topics.isEmpty()) {
             return;
         }
 
         for (String topic : topics) {
-            messageAvailableCallbackDispatcher.dispatch(topic);
+            messageProcessorDispatcher.dispatch(topic);
             if (enablePgNotify) {
-                queueManagerDao.sendNotify(topic);
+                queueDao.sendNotify(topic);
             }
         }
     }
@@ -145,13 +145,13 @@ public class QueueManagerImpl implements QueueManager {
         scheduler = null;
 
         // 关闭所有消息处理器的线程池
-        messageAvailableCallbackDispatcher.shutdown();
+        messageProcessorDispatcher.shutdown();
 
         log.debug("停止pgq成功");
     }
 
     @Override
     public Map<String, String> getThreadPoolStatus() {
-        return messageAvailableCallbackDispatcher.getThreadPoolStatus();
+        return messageProcessorDispatcher.getThreadPoolStatus();
     }
 }

@@ -1,8 +1,8 @@
 package github.luckygc.pgq;
 
+import github.luckygc.pgq.api.MessageProcessor;
 import github.luckygc.pgq.api.MessageQueue;
 import github.luckygc.pgq.api.handler.MessageHandler;
-import github.luckygc.pgq.api.manager.MessageManager;
 import github.luckygc.pgq.model.Message;
 import java.util.List;
 import java.util.Objects;
@@ -13,19 +13,19 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MessageProcessor {
+public class AsyncMessageProcessor implements MessageProcessor {
 
-    private static final Logger log = LoggerFactory.getLogger(MessageProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(AsyncMessageProcessor.class);
 
-    private MessageQueue messageQueue;
-    private MessageManager messageManager;
+    private final MessageQueue messageQueue;
     private final MessageHandler messageHandler;
     private final String topic;
     private final int maxPoll;
     private final Semaphore semaphore;
     private final ThreadPoolExecutor threadPool;
 
-    public MessageProcessor(MessageQueue messageQueue, MessageHandler messageHandler) {
+    public AsyncMessageProcessor(MessageQueue messageQueue, MessageHandler messageHandler) {
+        this.messageQueue = Objects.requireNonNull(messageQueue);
         this.messageHandler = Objects.requireNonNull(messageHandler);
         this.topic = Objects.requireNonNull(messageHandler.topic());
 
@@ -54,7 +54,13 @@ public class MessageProcessor {
         threadPool.allowCoreThreadTimeOut(true);
     }
 
-    public void asyncProcess() {
+    @Override
+    public String topic() {
+        return topic;
+    }
+
+    @Override
+    public void process() {
         if (!semaphore.tryAcquire()) {
             return;
         }
@@ -67,7 +73,7 @@ public class MessageProcessor {
         }
     }
 
-    public void loopPollAndHandle() {
+    private void loopPollAndHandle() {
         try {
             List<Message> messages;
             while (!(messages = messageQueue.poll(topic, maxPoll)).isEmpty()) {
