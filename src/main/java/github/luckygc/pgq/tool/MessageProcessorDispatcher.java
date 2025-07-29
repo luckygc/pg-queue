@@ -3,10 +3,14 @@ package github.luckygc.pgq.tool;
 import github.luckygc.pgq.api.MessageProcessor;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 public class MessageProcessorDispatcher {
+
+    private static final Logger log = LoggerFactory.getLogger(MessageProcessorDispatcher.class);
 
     private final Map<String, MessageProcessor> processorMap = new ConcurrentHashMap<>();
 
@@ -38,7 +42,11 @@ public class MessageProcessorDispatcher {
 
     public void shutdown() {
         for (MessageProcessor processor : processorMap.values()) {
-            processor.shutdown();
+            try {
+                processor.shutdown();
+            } catch (Throwable t) {
+                log.error("关闭消息处理器失败", t);
+            }
         }
     }
 }
