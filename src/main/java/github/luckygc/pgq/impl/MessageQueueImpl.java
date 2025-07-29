@@ -1,13 +1,13 @@
 package github.luckygc.pgq.impl;
 
-import github.luckygc.pgq.MessageProcessorDispatcher;
+import github.luckygc.pgq.PgNotifier;
 import github.luckygc.pgq.PgmqConstants;
 import github.luckygc.pgq.Utils;
 import github.luckygc.pgq.api.DelayMessageQueue;
 import github.luckygc.pgq.api.MessageQueue;
 import github.luckygc.pgq.api.PriorityMessageQueue;
+import github.luckygc.pgq.api.callback.MessageAvailableCallback;
 import github.luckygc.pgq.dao.MessageDao;
-import github.luckygc.pgq.dao.QueueDao;
 import github.luckygc.pgq.model.MessageDO;
 import github.luckygc.pgq.model.MessageDO.Builder;
 import java.time.Duration;
@@ -19,24 +19,16 @@ import org.jspecify.annotations.Nullable;
 
 public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, PriorityMessageQueue {
 
-    private final MessageProcessorDispatcher messageProcessorDispatcher;
+
     private final MessageDao messageDao;
-    private final boolean enablePgNotify;
-    private QueueDao queueDao;
+    private final List<MessageAvailableCallback> callbacks;
+    @Nullable
+    private final PgNotifier pgNotifier;
 
-    public MessageQueueImpl(MessageDao messageDao, String topic,
-            MessageProcessorDispatcher messageProcessorDispatcher) {
+    public MessageQueueImpl(MessageDao messageDao, List<MessageAvailableCallback> callbacks, PgNotifier pgNotifier) {
         this.messageDao = Objects.requireNonNull(messageDao);
-        this.messageProcessorDispatcher = Objects.requireNonNull(messageProcessorDispatcher);
-        this.enablePgNotify = false;
-    }
-
-    public MessageQueueImpl(MessageDao messageDao,
-            MessageProcessorDispatcher messageProcessorDispatcher) {
-        this.messageDao = Objects.requireNonNull(messageDao);
-        this.messageProcessorDispatcher = Objects.requireNonNull(messageProcessorDispatcher);
-        this.enablePgNotify = true;
-        this.queueDao = Objects.requireNonNull(queueDao);
+        this.callbacks = Objects.requireNonNull(callbacks);
+        this.pgNotifier = pgNotifier;
     }
 
     @Override
@@ -47,6 +39,10 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
                 .attempt(0)
                 .build();
         messageDao.insertIntoPending(messageDO);
+
+        if (pgNotifier != null) {
+            pgNotifier.sendNotify(topic);
+        }
     }
 
     @Override

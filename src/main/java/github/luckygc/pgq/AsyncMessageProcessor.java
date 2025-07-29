@@ -79,6 +79,9 @@ public class AsyncMessageProcessor implements MessageProcessor {
             while (!(messages = messageQueue.poll(topic, maxPoll)).isEmpty()) {
                 for (Message message : messages) {
                     try {
+                        if (Thread.currentThread().isInterrupted()) {
+                            return;
+                        }
                         messageHandler.handle(message);
                     } catch (Throwable t) {
                         log.error("处理消息失败", t);

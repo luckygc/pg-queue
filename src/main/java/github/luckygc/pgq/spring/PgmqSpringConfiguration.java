@@ -1,7 +1,7 @@
 package github.luckygc.pgq.spring;
 
 import github.luckygc.pgq.api.manager.QueueManager;
-import github.luckygc.pgq.impl.QueueManagerImpl;
+import github.luckygc.pgq.impl.PgmqManagerImpl;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
@@ -18,7 +18,7 @@ public class PgmqSpringConfiguration {
             ObjectProvider<SQLExceptionTranslator> sqlExceptionTranslator) {
         JdbcTemplate jdbcTemplate = createJt(dataSource, sqlExceptionTranslator);
         TransactionTemplate transactionTemplate = new TransactionTemplate(platformTransactionManager);
-        return new QueueManagerImpl(jdbcTemplate, transactionTemplate);
+        return new PgmqManagerImpl(jdbcTemplate, transactionTemplate);
     }
 
     private JdbcTemplate createJt(DataSource dataSource,

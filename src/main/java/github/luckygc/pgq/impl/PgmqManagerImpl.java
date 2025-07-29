@@ -2,67 +2,71 @@ package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.AsyncMessageProcessor;
 import github.luckygc.pgq.MessageProcessorDispatcher;
-import github.luckygc.pgq.PgChannelListener;
+import github.luckygc.pgq.PgListener;
+import github.luckygc.pgq.PgNotifier;
 import github.luckygc.pgq.PgmqConstants;
 import github.luckygc.pgq.SingleMessageAvailableCallBackImpl;
-import github.luckygc.pgq.api.handler.BatchMessageHandler;
+import github.luckygc.pgq.api.DelayMessageQueue;
 import github.luckygc.pgq.api.MessageQueue;
+import github.luckygc.pgq.api.PgmqManager;
+import github.luckygc.pgq.api.PriorityMessageQueue;
+import github.luckygc.pgq.api.callback.MessageAvailableCallback;
+import github.luckygc.pgq.api.handler.BatchMessageHandler;
+import github.luckygc.pgq.api.handler.MessageHandler;
 import github.luckygc.pgq.api.manager.DeadMessageManager;
 import github.luckygc.pgq.api.manager.MessageManager;
-import github.luckygc.pgq.api.manager.QueueManager;
-import github.luckygc.pgq.api.handler.SingleMessageHandler;
 import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.dao.QueueDao;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.support.TransactionTemplate;
 
-public class QueueManagerImpl {
+public class PgmqManagerImpl implements PgmqManager {
 
-    private static final Logger log = LoggerFactory.getLogger(QueueManagerImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(PgmqManagerImpl.class);
 
-    private final Map<String, MessageQueue> queueMap = new ConcurrentHashMap<>();
+    private final List<MessageAvailableCallback> callbacks = new CopyOnWriteArrayList<>();
 
     private final MessageProcessorDispatcher messageProcessorDispatcher;
     private final QueueDao queueDao;
     private final MessageDao messageDao;
-    private final MessageManager messageManager;
-    private final DeadMessageManager deadMessageManager;
+    private final MessageQueueImpl messageQueue;
+
+    @Nullable
+    private final PgNotifier pgNotifier;
+    @Nullable
+    private final PgListener pgListener;
+
     private ScheduledExecutorService scheduler;
 
-    private final boolean enablePgNotify;
-    private PgChannelListener pgChannelListener;
+    public PgmqManagerImpl(JdbcTemplate jdbcTemplate) {
+        this(jdbcTemplate, null, null, null);
+    }
 
-    public QueueManagerImpl(JdbcTemplate jdbcTemplate) {
+    public PgmqManagerImpl(JdbcTemplate jdbcTemplate, String jdbcUrl, String username, String password) {
         this.messageProcessorDispatcher = new MessageProcessorDispatcher();
         this.queueDao = new QueueDao(jdbcTemplate);
         this.messageDao = new MessageDao(jdbcTemplate);
-        MessageDao messageDao = new MessageDao(jdbcTemplate);
-        this.messageManager = new MessageManagerImpl(messageDao);
-        this.deadMessageManager = new DeadMessageManagerImpl(messageDao);
-        this.enablePgNotify = false;
-    }
 
-    public QueueManagerImpl(JdbcTemplate jdbcTemplate, TransactionTemplate transactionTemplate, String jdbcUrl,
-            String username, String password) {
-        this.messageProcessorDispatcher = new MessageProcessorDispatcher();
-        this.queueDao = new QueueDao(jdbcTemplate, transactionTemplate);
-        this.messageDao = new MessageDao(jdbcTemplate, transactionTemplate);
-        MessageDao messageDao = new MessageDao(jdbcTemplate);
-        this.messageManager = new MessageManagerImpl(messageDao);
-        this.deadMessageManager = new DeadMessageManagerImpl(messageDao);
-        this.enablePgNotify = true;
-        this.pgChannelListener = new PgChannelListener(PgmqConstants.TOPIC_CHANNEL, Objects.requireNonNull(jdbcUrl),
-                Objects.requireNonNull(username), password, messageProcessorDispatcher);
+        if (jdbcUrl == null) {
+            this.pgNotifier = null;
+            this.pgListener = null;
+        } else {
+            Objects.requireNonNull(username);
+            this.pgNotifier = new PgNotifier(queueDao);
+            this.pgListener = new PgListener(PgmqConstants.TOPIC_CHANNEL, jdbcUrl, username, password, callbacks);
+        }
+
+        this.messageQueue = new MessageQueueImpl(messageDao, callbacks);
+        callbacks.add(messageProcessorDispatcher);
     }
 
     @Override
@@ -81,16 +85,17 @@ public class QueueManagerImpl {
     }
 
     @Override
-    public void registerMessageHandler(SingleMessageHandler messageHandler) {
+    public void registerMessageHandler(messageHandler) {
         MessageQueue queue = queue(messageHandler.topic());
-        SingleMessageAvailableCallBackImpl processor = new SingleMessageAvailableCallBackImpl(queue, messageManager, messageHandler);
+        SingleMessageAvailableCallBackImpl processor = new SingleMessageAvailableCallBackImpl(queue, messageManager,
+                messageHandler);
         messageProcessorDispatcher.register(processor);
     }
 
     @Override
     public void registerMessageHandler(BatchMessageHandler messageHandler) {
         MessageQueue queue = queue(messageHandler.topic());
-        AsyncMessageProcessor processor = new AsyncMessageProcessor(queue, messageManager, messageHandler);
+        AsyncMessageProcessor processor = new AsyncMessageProcessor(queue, messageHandler);
         messageProcessorDispatcher.register(processor);
     }
 
@@ -112,7 +117,7 @@ public class QueueManagerImpl {
     @Override
     public void start() throws SQLException {
         if (enablePgNotify) {
-            pgChannelListener.startListen();
+            pgListener.startListen();
         }
 
         scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -138,7 +143,7 @@ public class QueueManagerImpl {
     @Override
     public void stop() {
         if (enablePgNotify) {
-            pgChannelListener.stopListen();
+            pgListener.stopListen();
         }
 
         scheduler.shutdownNow();
@@ -151,7 +156,38 @@ public class QueueManagerImpl {
     }
 
     @Override
-    public Map<String, String> getThreadPoolStatus() {
-        return messageProcessorDispatcher.getThreadPoolStatus();
+    public MessageQueue queue() {
+        return messageQueue;
+    }
+
+    @Override
+    public DelayMessageQueue delayQueue() {
+        return messageQueue;
+    }
+
+    @Override
+    public PriorityMessageQueue priorityQueue() {
+        return messageQueue;
+    }
+
+    @Override
+    public void registerHandler(MessageHandler messageHandler) {
+        AsyncMessageProcessor asyncMessageProcessor = new AsyncMessageProcessor(messageQueue, messageHandler);
+        messageProcessorDispatcher.register(asyncMessageProcessor);
+    }
+
+    @Override
+    public void unregisterHandler(MessageHandler messageHandler) {
+
+    }
+
+    @Override
+    public void registerCallback(MessageAvailableCallback callback) {
+        callbacks.add(Objects.requireNonNull(callback));
+    }
+
+    @Override
+    public void unregisterCallback(MessageAvailableCallback callback) {
+
     }
 }

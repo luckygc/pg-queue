@@ -1,9 +1,11 @@
 package github.luckygc.pgq;
 
+import github.luckygc.pgq.api.callback.MessageAvailableCallback;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -14,9 +16,9 @@ import org.postgresql.jdbc.PgConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PgChannelListener {
+public class PgListener {
 
-    private static final Logger log = LoggerFactory.getLogger(PgChannelListener.class);
+    private static final Logger log = LoggerFactory.getLogger(PgListener.class);
 
     private static final int LISTEN_CHANNEL_TIMEOUT_MILLIS = Math.toIntExact(TimeUnit.SECONDS.toMillis(20));
     private static final long RECONNECT_RETRY_DELAY_NANOS = TimeUnit.SECONDS.toNanos(10);
@@ -28,18 +30,18 @@ public class PgChannelListener {
     private final String jdbcUrl;
     private final String username;
     private final String password;
-    private final MessageProcessorDispatcher messageProcessorDispatcher;
+    private final List<MessageAvailableCallback> callbacks;
 
     private final AtomicBoolean runningFlag = new AtomicBoolean(false);
     private volatile @Nullable PgConnection con;
 
-    public PgChannelListener(String channel, String jdbcUrl, String username, String password,
-            MessageProcessorDispatcher messageProcessorDispatcher) {
+    public PgListener(String channel, String jdbcUrl, String username, String password,
+            List<MessageAvailableCallback> callbacks) {
         this.channel = Objects.requireNonNull(channel);
         this.jdbcUrl = Objects.requireNonNull(jdbcUrl);
         this.username = Objects.requireNonNull(username);
         this.password = password;
-        this.messageProcessorDispatcher = Objects.requireNonNull(messageProcessorDispatcher);
+        this.callbacks = Objects.requireNonNull(callbacks);
     }
 
     public void startListen() throws SQLException {
@@ -75,10 +77,12 @@ public class PgChannelListener {
                     int pid = notification.getPID();
                     log.debug("收到消息, topic:{}, pid:{}", topic, pid);
 
-                    try {
-                        messageProcessorDispatcher.dispatch(topic);
-                    } catch (Throwable t) {
-                        log.error("调度队列监听器失败", t);
+                    for (MessageAvailableCallback callback : callbacks) {
+                        try {
+                            callback.onMessageAvailable(topic);
+                        } catch (Throwable t) {
+                            log.error("消息可用回调失败", t);
+                        }
                     }
                 }
             } catch (SQLException e) {
