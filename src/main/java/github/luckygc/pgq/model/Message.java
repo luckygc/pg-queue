@@ -5,8 +5,12 @@ import github.luckygc.pgq.dao.MessageDao;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Message {
+
+    private static final Logger log = LoggerFactory.getLogger(Message.class);
 
     private final Long id;
 
@@ -53,15 +57,24 @@ public class Message {
     }
 
     public void delete() {
-        messageDao.deleteProcessingMessageById(id);
+        int deleteCount = messageDao.deleteProcessingMessageById(id);
+        if (deleteCount == 0) {
+            log.warn("删除消息失败，消息可能已被处理,id:{}", id);
+        }
     }
 
     public void dead() {
-        messageDao.moveProcessingMessageToDeadById(id);
+        int deadCount = messageDao.moveProcessingMessageToDeadById(id);
+        if (deadCount == 0) {
+            log.warn("移动消息到死信队列失败，消息可能已被处理,id:{}", id);
+        }
     }
 
     public void retry() {
-        messageDao.moveProcessingMessageToPendingById(id);
+        int retryCount = messageDao.moveProcessingMessageToPendingById(id);
+        if (retryCount == 0) {
+            log.warn("重试消息失败，消息可能已被处理,id:{}", id);
+        }
     }
 
     public void retry(Duration processDelay) {
@@ -69,7 +82,10 @@ public class Message {
         Utils.checkDurationIsPositive(processDelay);
 
         LocalDateTime visibleTime = LocalDateTime.now().plus(processDelay);
-        messageDao.moveProcessingMessageToInvisibleById(id, visibleTime);
+        int retryCount = messageDao.moveProcessingMessageToInvisibleById(id, visibleTime);
+        if (retryCount == 0) {
+            log.warn("延迟重试消息失败，消息可能已被处理,id:{}", id);
+        }
     }
 
     public static class Builder {
