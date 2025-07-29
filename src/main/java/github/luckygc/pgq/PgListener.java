@@ -30,18 +30,18 @@ public class PgListener {
     private final String jdbcUrl;
     private final String username;
     private final String password;
-    private final List<MessageAvailableCallback> callbacks;
+    private final MessageAvailableCallback callback;
 
     private final AtomicBoolean runningFlag = new AtomicBoolean(false);
     private volatile @Nullable PgConnection con;
 
     public PgListener(String channel, String jdbcUrl, String username, String password,
-            List<MessageAvailableCallback> callbacks) {
+            MessageAvailableCallback callback) {
         this.channel = Objects.requireNonNull(channel);
         this.jdbcUrl = Objects.requireNonNull(jdbcUrl);
         this.username = Objects.requireNonNull(username);
         this.password = password;
-        this.callbacks = Objects.requireNonNull(callbacks);
+        this.callback = Objects.requireNonNull(callback);
     }
 
     public void startListen() throws SQLException {
@@ -77,12 +77,10 @@ public class PgListener {
                     int pid = notification.getPID();
                     log.debug("收到消息, topic:{}, pid:{}", topic, pid);
 
-                    for (MessageAvailableCallback callback : callbacks) {
-                        try {
-                            callback.onMessageAvailable(topic);
-                        } catch (Throwable t) {
-                            log.error("消息可用回调失败", t);
-                        }
+                    try {
+                        callback.onMessageAvailable(topic);
+                    } catch (Throwable t) {
+                        log.error("消息可用回调失败", t);
                     }
                 }
             } catch (SQLException e) {

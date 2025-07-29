@@ -29,7 +29,6 @@ public class PgmqManagerImpl implements PgmqManager {
     private static final Logger log = LoggerFactory.getLogger(PgmqManagerImpl.class);
 
     private final QueueDao queueDao;
-    private final MessageDao messageDao;
     private final MessageQueueImpl messageQueue;
 
     @Nullable
@@ -45,7 +44,7 @@ public class PgmqManagerImpl implements PgmqManager {
 
     public PgmqManagerImpl(JdbcTemplate jdbcTemplate, String jdbcUrl, String username, String password) {
         this.queueDao = new QueueDao(jdbcTemplate);
-        this.messageDao = new MessageDao(jdbcTemplate);
+
 
         MessageAvailableCallback callback = new MessageProcessorDispatcher();
 
@@ -58,6 +57,7 @@ public class PgmqManagerImpl implements PgmqManager {
             this.pgListener = new PgListener(PgmqConstants.TOPIC_CHANNEL, jdbcUrl, username, password, callbacks);
         }
 
+        MessageDao messageDao = new MessageDao(jdbcTemplate);
         this.messageQueue = new MessageQueueImpl(messageDao, callback, pgNotifier);
     }
 
@@ -86,15 +86,12 @@ public class PgmqManagerImpl implements PgmqManager {
 
     @Override
     public void stop() {
-        if (enablePgNotify) {
+        if (pgListener != null) {
             pgListener.stopListen();
         }
 
         scheduler.shutdownNow();
         scheduler = null;
-
-        // 关闭所有消息处理器的线程池
-        messageProcessorDispatcher.shutdown();
 
         log.debug("停止pgq成功");
     }
