@@ -22,6 +22,10 @@ public class MessageProcessorDispatcher {
         }
     }
 
+    public boolean unregister(MessageProcessor messageProcessor) {
+        return processorMap.remove(messageProcessor.topic(), messageProcessor);
+    }
+
     public void dispatch(String topic) {
         Objects.requireNonNull(topic);
 
