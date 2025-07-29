@@ -146,32 +146,19 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
 
     @Override
     public @Nullable Message poll(String topic) {
-        List<MessageDO> messageDOS = messageDao.getPendingMessagesAndMoveToProcessing(topic, 1,
-                PgmqConstants.PROCESS_TIMEOUT);
-        if (messageDOS.isEmpty()) {
+        LocalDateTime processTimeoutTime = LocalDateTime.now().plus(PgmqConstants.PROCESS_TIMEOUT);
+        List<Message> messages = messageDao.getPendingMessagesAndMoveToProcessing(topic, 1, processTimeoutTime);
+        if (messages.isEmpty()) {
             return null;
         }
 
-        return messageDOS.get(0);
+        return messages.get(0);
     }
 
     @Override
-    public @Nullable MessageDO pull(Duration processTimeout) {
-        List<MessageDO> messageDOS = messageDao.getPendingMessagesAndMoveToProcessing(topic, 1, processTimeout);
-        if (messageDOS.isEmpty()) {
-            return null;
-        }
-
-        return messageDOS.get(0);
-    }
-
-    @Override
-    public List<MessageDO> pull(int pullCount) {
-        return messageDao.getPendingMessagesAndMoveToProcessing(topic, pullCount, PgmqConstants.PROCESS_TIMEOUT);
-    }
-
-    @Override
-    public List<MessageDO> pull(int pullCount, Duration processTimeout) {
-        return messageDao.getPendingMessagesAndMoveToProcessing(topic, pullCount, processTimeout);
+    public List<Message> poll(String topic, int maxPoll) {
+        Utils.checkMaxPollRange(maxPoll);
+        LocalDateTime processTimeoutTime = LocalDateTime.now().plus(PgmqConstants.PROCESS_TIMEOUT);
+        return messageDao.getPendingMessagesAndMoveToProcessing(topic, maxPoll, processTimeoutTime);
     }
 }

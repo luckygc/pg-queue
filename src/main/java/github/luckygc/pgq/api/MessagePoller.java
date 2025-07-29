@@ -6,8 +6,14 @@ import org.jspecify.annotations.Nullable;
 
 public interface MessagePoller {
 
+    /**
+     * 非阻塞
+     */
     @Nullable
     Message poll(String topic);
 
+    /**
+     * 非阻塞
+     */
     List<Message> poll(String topic, int pollMax);
 }
