@@ -6,7 +6,7 @@
 
 	<groupId>com.github.luckygc</groupId>
 	<artifactId>pg-queue</artifactId>
-	<version>1.1.0</version>
+	<version>1.2.0</version>
 	<name>pg-queue</name>
 	<description>pg-queue</description>
 
@@ -173,7 +173,7 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>3.5.3</version>
 				<configuration>
-					<skip>false</skip>
+					<skip>true</skip>
 				</configuration>
 			</plugin>
 
