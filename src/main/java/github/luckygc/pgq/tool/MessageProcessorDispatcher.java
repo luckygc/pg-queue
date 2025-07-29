@@ -22,8 +22,11 @@ public class MessageProcessorDispatcher {
         }
     }
 
-    public boolean unregister(MessageProcessor messageProcessor) {
-        return processorMap.remove(messageProcessor.topic(), messageProcessor);
+    public void unregister(String topic) {
+        boolean noProcessor = processorMap.remove(topic) == null;
+        if (noProcessor) {
+            throw new IllegalStateException("未找到topic[%s]的消息处理器".formatted(topic));
+        }
     }
 
     public void dispatch(String topic) {
