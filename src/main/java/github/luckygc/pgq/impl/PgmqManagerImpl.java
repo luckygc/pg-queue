@@ -5,22 +5,17 @@ import github.luckygc.pgq.MessageProcessorDispatcher;
 import github.luckygc.pgq.PgListener;
 import github.luckygc.pgq.PgNotifier;
 import github.luckygc.pgq.PgmqConstants;
-import github.luckygc.pgq.SingleMessageAvailableCallBackImpl;
 import github.luckygc.pgq.api.DelayMessageQueue;
 import github.luckygc.pgq.api.MessageQueue;
 import github.luckygc.pgq.api.PgmqManager;
 import github.luckygc.pgq.api.PriorityMessageQueue;
 import github.luckygc.pgq.api.callback.MessageAvailableCallback;
-import github.luckygc.pgq.api.handler.BatchMessageHandler;
 import github.luckygc.pgq.api.handler.MessageHandler;
-import github.luckygc.pgq.api.manager.DeadMessageManager;
-import github.luckygc.pgq.api.manager.MessageManager;
 import github.luckygc.pgq.dao.MessageDao;
 import github.luckygc.pgq.dao.QueueDao;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -33,9 +28,6 @@ public class PgmqManagerImpl implements PgmqManager {
 
     private static final Logger log = LoggerFactory.getLogger(PgmqManagerImpl.class);
 
-    private final MessageAvailableCallback callback;
-
-    private final MessageProcessorDispatcher messageProcessorDispatcher;
     private final QueueDao queueDao;
     private final MessageDao messageDao;
     private final MessageQueueImpl messageQueue;
@@ -52,9 +44,10 @@ public class PgmqManagerImpl implements PgmqManager {
     }
 
     public PgmqManagerImpl(JdbcTemplate jdbcTemplate, String jdbcUrl, String username, String password) {
-        this.callback = new MessageProcessorDispatcher();
         this.queueDao = new QueueDao(jdbcTemplate);
         this.messageDao = new MessageDao(jdbcTemplate);
+
+        MessageAvailableCallback callback = new MessageProcessorDispatcher();
 
         if (jdbcUrl == null) {
             this.pgNotifier = null;
@@ -65,57 +58,12 @@ public class PgmqManagerImpl implements PgmqManager {
             this.pgListener = new PgListener(PgmqConstants.TOPIC_CHANNEL, jdbcUrl, username, password, callbacks);
         }
 
-        this.messageQueue = new MessageQueueImpl(messageDao, callback);
-    }
-
-    @Override
-    public MessageQueue queue(String topic) {
-        return queueMap.compute(topic, (k, v) -> {
-            if (v != null) {
-                return v;
-            }
-
-            if (enablePgNotify) {
-                return new MessageQueueImpl(messageDao, k, messageProcessorDispatcher, queueDao);
-            }
-
-            return new MessageQueueImpl(messageDao, k, messageProcessorDispatcher);
-        });
-    }
-
-    @Override
-    public void registerMessageHandler(messageHandler) {
-        MessageQueue queue = queue(messageHandler.topic());
-        SingleMessageAvailableCallBackImpl processor = new SingleMessageAvailableCallBackImpl(queue, messageManager,
-                messageHandler);
-        messageProcessorDispatcher.register(processor);
-    }
-
-    @Override
-    public void registerMessageHandler(BatchMessageHandler messageHandler) {
-        MessageQueue queue = queue(messageHandler.topic());
-        AsyncMessageProcessor processor = new AsyncMessageProcessor(queue, messageHandler);
-        messageProcessorDispatcher.register(processor);
-    }
-
-    @Override
-    public MessageManager processingMessageManager() {
-        return messageManager;
-    }
-
-    @Override
-    public DeadMessageManager deadMessageManager() {
-        return deadMessageManager;
-    }
-
-    @Override
-    public boolean isEnablePgNotify() {
-        return enablePgNotify;
+        this.messageQueue = new MessageQueueImpl(messageDao, callback, pgNotifier);
     }
 
     @Override
     public void start() throws SQLException {
-        if (enablePgNotify) {
+        if (pgListener != null) {
             pgListener.startListen();
         }
 
