@@ -1,6 +1,5 @@
 package github.luckygc.pgq.impl;
 
-import github.luckygc.pgq.AsyncMessageProcessor;
 import github.luckygc.pgq.MessageProcessorDispatcher;
 import github.luckygc.pgq.PgListener;
 import github.luckygc.pgq.PgNotifier;
@@ -54,7 +53,7 @@ public class PgmqManagerImpl implements PgmqManager {
         } else {
             Objects.requireNonNull(username);
             this.pgNotifier = new PgNotifier(queueDao);
-            this.pgListener = new PgListener(PgmqConstants.TOPIC_CHANNEL, jdbcUrl, username, password, callback);
+            this.pgListener = new PgListener(PgmqConstants.TOPIC_CHANNEL, jdbcUrl, username, password, dispatcher);
         }
 
         MessageDao messageDao = new MessageDao(jdbcTemplate);
@@ -113,8 +112,8 @@ public class PgmqManagerImpl implements PgmqManager {
 
     @Override
     public void registerHandler(MessageHandler messageHandler) {
-        AsyncMessageProcessor asyncMessageProcessor = new MessageProcessor(, messageHandler);
-        dispatcher.register(asyncMessageProcessor);
+        MessageProcessor messageProcessor = new MessageProcessor(messageQueue, messageHandler);
+        dispatcher.register(messageProcessor);
     }
 
     @Override

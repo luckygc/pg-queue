@@ -1,11 +1,9 @@
 package github.luckygc.pgq;
 
-import github.luckygc.pgq.api.callback.MessageAvailableCallback;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -30,18 +28,18 @@ public class PgListener {
     private final String jdbcUrl;
     private final String username;
     private final String password;
-    private final MessageAvailableCallback callback;
+    private final MessageProcessorDispatcher dispatcher;
 
     private final AtomicBoolean runningFlag = new AtomicBoolean(false);
     private volatile @Nullable PgConnection con;
 
     public PgListener(String channel, String jdbcUrl, String username, String password,
-            MessageProcessorDispatcher callback) {
+            MessageProcessorDispatcher dispatcher) {
         this.channel = Objects.requireNonNull(channel);
         this.jdbcUrl = Objects.requireNonNull(jdbcUrl);
         this.username = Objects.requireNonNull(username);
         this.password = password;
-        this.callback = Objects.requireNonNull(callback);
+        this.dispatcher = Objects.requireNonNull(dispatcher);
     }
 
     public void startListen() throws SQLException {
@@ -78,9 +76,9 @@ public class PgListener {
                     log.debug("收到消息, topic:{}, pid:{}", topic, pid);
 
                     try {
-                        callback.onMessageAvailable(topic);
+                        dispatcher.dispatch(topic);
                     } catch (Throwable t) {
-                        log.error("消息可用回调失败", t);
+                        log.error("消息处理器调度失败", t);
                     }
                 }
             } catch (SQLException e) {

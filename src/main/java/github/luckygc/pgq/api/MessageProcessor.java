@@ -47,6 +47,10 @@ public class MessageProcessor {
         threadPool.allowCoreThreadTimeOut(true);
     }
 
+    public String topic() {
+        return topic;
+    }
+
     public void asyncProcess() {
         if (!semaphore.tryAcquire()) {
             return;
