@@ -202,13 +202,19 @@ class QueueDaoTest extends BaseIntegrationTest {
         // 插入同一个topic的多条消息
         LocalDateTime timeoutTime = LocalDateTime.now().minusMinutes(1);
 
-        jdbcTemplate.update(
-                "INSERT INTO pgmq_processing_queue (id, create_time, topic, priority, payload, attempt, timeout_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbcTemplate.update("""
+                        INSERT INTO pgmq_processing_queue
+                            (id, create_time, topic, priority, payload, attempt, timeout_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
                 1L, LocalDateTime.now(), "same-topic", 0, "message1", 0, timeoutTime
         );
 
-        jdbcTemplate.update(
-                "INSERT INTO pgmq_processing_queue (id, create_time, topic, priority, payload, attempt, timeout_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbcTemplate.update("""
+                        INSERT INTO pgmq_processing_queue
+                            (id, create_time, topic, priority, payload, attempt, timeout_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
                 2L, LocalDateTime.now(), "same-topic", 0, "message2", 0, timeoutTime
         );
 

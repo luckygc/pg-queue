@@ -174,8 +174,11 @@ class MessageDaoTest extends BaseIntegrationTest {
     @DisplayName("应该能够根据ID删除处理队列中的消息")
     void shouldDeleteProcessingMessageById() {
         // 先插入一条消息到处理队列
-        jdbcTemplate.update(
-                "INSERT INTO pgmq_processing_queue (id, create_time, topic, priority, payload, attempt, timeout_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbcTemplate.update("""
+                        INSERT INTO pgmq_processing_queue
+                            (id, create_time, topic, priority, payload, attempt, timeout_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
                 1L, LocalDateTime.now(), "test-topic", 0, "test payload", 0, LocalDateTime.now().plusMinutes(30)
         );
 
@@ -195,8 +198,11 @@ class MessageDaoTest extends BaseIntegrationTest {
     @DisplayName("应该能够将处理队列中的消息移动到死信队列")
     void shouldMoveProcessingMessageToDeadById() {
         // 先插入一条消息到处理队列
-        jdbcTemplate.update(
-                "INSERT INTO pgmq_processing_queue (id, create_time, topic, priority, payload, attempt, timeout_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbcTemplate.update("""
+                        INSERT INTO pgmq_processing_queue
+                            (id, create_time, topic, priority, payload, attempt, timeout_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
                 1L, LocalDateTime.now(), "test-topic", 0, "test payload", 0, LocalDateTime.now().plusMinutes(30)
         );
 
@@ -225,8 +231,11 @@ class MessageDaoTest extends BaseIntegrationTest {
     @DisplayName("应该能够将处理队列中的消息移动到待处理队列")
     void shouldMoveProcessingMessageToPendingById() {
         // 先插入一条消息到处理队列
-        jdbcTemplate.update(
-                "INSERT INTO pgmq_processing_queue (id, create_time, topic, priority, payload, attempt, timeout_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        jdbcTemplate.update("""
+                        INSERT INTO pgmq_processing_queue
+                            (id, create_time, topic, priority, payload, attempt, timeout_time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
                 1L, LocalDateTime.now(), "test-topic", 0, "test payload", 0, LocalDateTime.now().plusMinutes(30)
         );
 
