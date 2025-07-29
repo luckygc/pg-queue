@@ -1,9 +1,9 @@
 package github.luckygc.pgq.impl;
 
-import github.luckygc.pgq.MessageProcessorDispatcher;
-import github.luckygc.pgq.PgNotifier;
+import github.luckygc.pgq.tool.MessageProcessorDispatcher;
+import github.luckygc.pgq.tool.PgNotifier;
 import github.luckygc.pgq.PgmqConstants;
-import github.luckygc.pgq.Utils;
+import github.luckygc.pgq.tool.Checker;
 import github.luckygc.pgq.api.DelayMessageQueue;
 import github.luckygc.pgq.api.MessageQueue;
 import github.luckygc.pgq.api.PriorityMessageQueue;
@@ -58,7 +58,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
                 .attempt(0)
                 .build();
 
-        Utils.checkDurationIsPositive(processDelay);
+        Checker.checkDurationIsPositive(processDelay);
         LocalDateTime visibleTime = LocalDateTime.now().plus(processDelay);
         messageDao.insertIntoInvisible(messageDO, visibleTime);
     }
@@ -82,7 +82,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
 
     @Override
     public void send(String topic, List<String> messages) {
-        Utils.checkMessagesNotEmpty(messages);
+        Checker.checkMessagesNotEmpty(messages);
 
         List<MessageDO> messageDOS = new ArrayList<>(messages.size());
 
@@ -117,7 +117,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
                     .build());
         }
 
-        Utils.checkDurationIsPositive(processDelay);
+        Checker.checkDurationIsPositive(processDelay);
         LocalDateTime visibleTime = LocalDateTime.now().plus(processDelay);
         messageDao.insertIntoInvisible(messageDOS, visibleTime);
     }
@@ -157,7 +157,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
 
     @Override
     public List<Message> poll(String topic, int maxPoll) {
-        Utils.checkMaxPollRange(maxPoll);
+        Checker.checkMaxPollRange(maxPoll);
         LocalDateTime processTimeoutTime = LocalDateTime.now().plus(PgmqConstants.PROCESS_TIMEOUT);
         return messageDao.getPendingMessagesAndMoveToProcessing(topic, maxPoll, processTimeoutTime);
     }

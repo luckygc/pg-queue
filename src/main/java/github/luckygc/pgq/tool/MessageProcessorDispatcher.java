@@ -1,4 +1,4 @@
-package github.luckygc.pgq;
+package github.luckygc.pgq.tool;
 
 import github.luckygc.pgq.api.MessageProcessor;
 import java.util.Map;

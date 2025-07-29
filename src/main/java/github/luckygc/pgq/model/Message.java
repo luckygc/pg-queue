@@ -1,6 +1,6 @@
 package github.luckygc.pgq.model;
 
-import github.luckygc.pgq.Utils;
+import github.luckygc.pgq.tool.Checker;
 import github.luckygc.pgq.dao.MessageDao;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -79,7 +79,7 @@ public class Message {
 
     public void retry(Duration processDelay) {
         Objects.requireNonNull(processDelay);
-        Utils.checkDurationIsPositive(processDelay);
+        Checker.checkDurationIsPositive(processDelay);
 
         LocalDateTime visibleTime = LocalDateTime.now().plus(processDelay);
         int retryCount = messageDao.moveProcessingMessageToInvisibleById(id, visibleTime);

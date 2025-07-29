@@ -1,12 +1,12 @@
-package github.luckygc.pgq;
+package github.luckygc.pgq.tool;
 
 import java.time.Duration;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-public class Utils {
+public class Checker {
 
-    private Utils() {
+    private Checker() {
     }
 
     public static void checkMessagesNotEmpty(@Nullable List<?> messages) {

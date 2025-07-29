@@ -1,6 +1,6 @@
 package github.luckygc.pgq.api;
 
-import github.luckygc.pgq.PgmqHandlerThreadFactory;
+import github.luckygc.pgq.tool.PgmqHandlerThreadFactory;
 import github.luckygc.pgq.api.handler.MessageHandler;
 import github.luckygc.pgq.model.Message;
 import java.util.List;

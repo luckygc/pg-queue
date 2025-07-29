@@ -1,4 +1,4 @@
-package github.luckygc.pgq;
+package github.luckygc.pgq.tool;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

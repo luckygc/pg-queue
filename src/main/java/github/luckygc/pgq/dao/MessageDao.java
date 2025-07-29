@@ -1,6 +1,6 @@
 package github.luckygc.pgq.dao;
 
-import github.luckygc.pgq.Utils;
+import github.luckygc.pgq.tool.Checker;
 import github.luckygc.pgq.model.Message;
 import github.luckygc.pgq.model.MessageDO;
 import java.time.LocalDateTime;
@@ -44,7 +44,7 @@ public class MessageDao {
     }
 
     public void insertIntoPending(List<MessageDO> messageDOS) {
-        Utils.checkMessagesNotEmpty(messageDOS);
+        Checker.checkMessagesNotEmpty(messageDOS);
 
         List<Object[]> rows = new ArrayList<>(messageDOS.size());
         for (MessageDO messageDO : messageDOS) {
@@ -64,7 +64,7 @@ public class MessageDao {
     }
 
     public void insertIntoInvisible(List<MessageDO> messageDOS, LocalDateTime visibleTime) {
-        Utils.checkMessagesNotEmpty(messageDOS);
+        Checker.checkMessagesNotEmpty(messageDOS);
         Objects.requireNonNull(visibleTime);
 
         List<Object[]> rows = new ArrayList<>(messageDOS.size());
@@ -79,7 +79,7 @@ public class MessageDao {
     public List<Message> getPendingMessagesAndMoveToProcessing(String topic, int maxPoll,
             LocalDateTime processTimeoutTime) {
         Objects.requireNonNull(topic);
-        Utils.checkMaxPollRange(maxPoll);
+        Checker.checkMaxPollRange(maxPoll);
         Objects.requireNonNull(processTimeoutTime);
 
         String sql = """

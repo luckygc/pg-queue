@@ -1,4 +1,4 @@
-package github.luckygc.pgq;
+package github.luckygc.pgq.tool;
 
 import github.luckygc.pgq.dao.QueueDao;
 import java.util.List;
