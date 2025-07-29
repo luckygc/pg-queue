@@ -249,24 +249,13 @@ public class Demo {
 // 创建支持NOTIFY的管理器
 PgmqManager pgmqManager = new PgmqManagerImpl(
     jdbcTemplate,
-    "jdbc:postgresql://localhost:5432/mydb", // 数据库连接URL
+    "jdbc:postgresql://localhost:5432/db",
     "username",
     "password"
 );
 ```
 
 启用NOTIFY后，当有新消息时，集群中的所有节点都能实时收到通知。
-
-## 数据库表结构
-
-项目使用4个核心表来管理消息的生命周期：
-
-- `pgmq_pending_queue`: 待处理消息队列
-- `pgmq_invisible_queue`: 延时消息队列（未到处理时间）
-- `pgmq_processing_queue`: 处理中消息队列（已被消费者拉取）
-- `pgmq_dead_queue`: 死信消息队列（处理失败的消息）
-
-每个表都使用统一的序列`pgmq_message_seq`生成唯一ID，确保消息在不同状态间流转时保持一致性。
 
 ## 工作原理
 
