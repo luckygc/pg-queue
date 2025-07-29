@@ -8,6 +8,7 @@ import github.luckygc.pgq.api.MessageQueue;
 import github.luckygc.pgq.api.PriorityMessageQueue;
 import github.luckygc.pgq.api.callback.MessageAvailableCallback;
 import github.luckygc.pgq.dao.MessageDao;
+import github.luckygc.pgq.model.Message;
 import github.luckygc.pgq.model.MessageDO;
 import github.luckygc.pgq.model.MessageDO.Builder;
 import java.time.Duration;
@@ -21,13 +22,13 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
 
 
     private final MessageDao messageDao;
-    private final List<MessageAvailableCallback> callbacks;
+    private final MessageAvailableCallback callback;
     @Nullable
     private final PgNotifier pgNotifier;
 
-    public MessageQueueImpl(MessageDao messageDao, List<MessageAvailableCallback> callbacks, PgNotifier pgNotifier) {
+    public MessageQueueImpl(MessageDao messageDao, MessageAvailableCallback callback, PgNotifier pgNotifier) {
         this.messageDao = Objects.requireNonNull(messageDao);
-        this.callbacks = Objects.requireNonNull(callbacks);
+        this.callback = Objects.requireNonNull(callback);
         this.pgNotifier = pgNotifier;
     }
 
@@ -35,6 +36,7 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
     public void send(String topic, String message) {
         MessageDO messageDO = MessageDO.Builder.create()
                 .topic(topic)
+                .priority(PgmqConstants.MESSAGE_PRIORITY)
                 .payload(message)
                 .attempt(0)
                 .build();
@@ -43,19 +45,21 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
         if (pgNotifier != null) {
             pgNotifier.sendNotify(topic);
         }
+
+        callback.onMessageAvailable(topic);
     }
 
     @Override
     public void send(String topic, String message, Duration processDelay) {
         MessageDO messageDO = Builder.create()
                 .topic(topic)
+                .priority(PgmqConstants.MESSAGE_PRIORITY)
                 .payload(message)
                 .attempt(0)
                 .build();
 
         Utils.checkDurationIsPositive(processDelay);
         LocalDateTime visibleTime = LocalDateTime.now().plus(processDelay);
-
         messageDao.insertIntoInvisible(messageDO, visibleTime);
     }
 
@@ -63,11 +67,17 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
     public void send(String topic, String message, int priority) {
         MessageDO messageDO = MessageDO.Builder.create()
                 .topic(topic)
-                .payload(message)
                 .priority(priority)
+                .payload(message)
                 .attempt(0)
                 .build();
         messageDao.insertIntoPending(messageDO);
+
+        if (pgNotifier != null) {
+            pgNotifier.sendNotify(topic);
+        }
+
+        callback.onMessageAvailable(topic);
     }
 
     @Override
@@ -79,35 +89,63 @@ public class MessageQueueImpl implements MessageQueue, DelayMessageQueue, Priori
         for (String message : messages) {
             messageDOS.add(Builder.create()
                     .topic(topic)
+                    .priority(PgmqConstants.MESSAGE_PRIORITY)
                     .payload(message)
                     .attempt(0)
                     .build());
         }
 
         messageDao.insertIntoPending(messageDOS);
+
+        if (pgNotifier != null) {
+            pgNotifier.sendNotify(topic);
+        }
+
+        callback.onMessageAvailable(topic);
     }
 
     @Override
-    public void send(List<String> messages, Duration processDelay) {
-        List<MessageDO> messageDOObjs = MessageDO.of(topic, messages, PgmqConstants.MESSAGE_PRIORITY);
-        messageDao.insertIntoInvosible(messageDOObjs, processDelay);
+    public void send(String topic, List<String> messages, Duration processDelay) {
+        List<MessageDO> messageDOS = new ArrayList<>(messages.size());
+
+        for (String message : messages) {
+            messageDOS.add(Builder.create()
+                    .topic(topic)
+                    .priority(PgmqConstants.MESSAGE_PRIORITY)
+                    .payload(message)
+                    .attempt(0)
+                    .build());
+        }
+
+        Utils.checkDurationIsPositive(processDelay);
+        LocalDateTime visibleTime = LocalDateTime.now().plus(processDelay);
+        messageDao.insertIntoInvisible(messageDOS, visibleTime);
     }
 
     @Override
-    public void send(List<String> messages, int priority) {
-        List<MessageDO> messageDOObjs = MessageDO.of(topic, messages, priority);
-        messageDao.insertIntoPending(messageDOObjs);
-        dispatchAndSendNotify();
+    public void send(String topic, List<String> messages, int priority) {
+        List<MessageDO> messageDOS = new ArrayList<>(messages.size());
+
+        for (String message : messages) {
+            messageDOS.add(Builder.create()
+                    .topic(topic)
+                    .priority(priority)
+                    .payload(message)
+                    .attempt(0)
+                    .build());
+        }
+
+        messageDao.insertIntoPending(messageDOS);
+
+        if (pgNotifier != null) {
+            pgNotifier.sendNotify(topic);
+        }
+
+        callback.onMessageAvailable(topic);
     }
 
     @Override
-    public void send(List<String> messages, Duration processDelay, int priority) {
-        List<MessageDO> messageDOObjs = MessageDO.of(topic, messages, priority);
-        messageDao.insertIntoInvosible(messageDOObjs, processDelay);
-    }
-
-    @Override
-    public @Nullable MessageDO pull() {
+    public @Nullable Message poll(String topic) {
         List<MessageDO> messageDOS = messageDao.getPendingMessagesAndMoveToProcessing(topic, 1,
                 PgmqConstants.PROCESS_TIMEOUT);
         if (messageDOS.isEmpty()) {

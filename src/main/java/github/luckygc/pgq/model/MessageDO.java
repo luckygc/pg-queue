@@ -1,6 +1,5 @@
 package github.luckygc.pgq.model;
 
-import github.luckygc.pgq.PgmqConstants;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -18,7 +17,7 @@ public class MessageDO {
 
     private MessageDO(Builder builder) {
         this.createTime = Objects.requireNonNullElseGet(builder.createTime, LocalDateTime::now);
-        this.priority = Objects.requireNonNullElse(builder.priority, PgmqConstants.MESSAGE_PRIORITY);
+        this.priority = Objects.requireNonNull(builder.priority);
         this.topic = Objects.requireNonNull(builder.topic);
         this.payload = Objects.requireNonNull(builder.payload);
         this.attempt = Objects.requireNonNull(builder.attempt);

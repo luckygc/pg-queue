@@ -33,7 +33,7 @@ public class PgmqManagerImpl implements PgmqManager {
 
     private static final Logger log = LoggerFactory.getLogger(PgmqManagerImpl.class);
 
-    private final List<MessageAvailableCallback> callbacks = new CopyOnWriteArrayList<>();
+    private final MessageAvailableCallback callback;
 
     private final MessageProcessorDispatcher messageProcessorDispatcher;
     private final QueueDao queueDao;
@@ -52,7 +52,7 @@ public class PgmqManagerImpl implements PgmqManager {
     }
 
     public PgmqManagerImpl(JdbcTemplate jdbcTemplate, String jdbcUrl, String username, String password) {
-        this.messageProcessorDispatcher = new MessageProcessorDispatcher();
+        this.callback = new MessageProcessorDispatcher();
         this.queueDao = new QueueDao(jdbcTemplate);
         this.messageDao = new MessageDao(jdbcTemplate);
 
@@ -65,8 +65,7 @@ public class PgmqManagerImpl implements PgmqManager {
             this.pgListener = new PgListener(PgmqConstants.TOPIC_CHANNEL, jdbcUrl, username, password, callbacks);
         }
 
-        this.messageQueue = new MessageQueueImpl(messageDao, callbacks);
-        callbacks.add(messageProcessorDispatcher);
+        this.messageQueue = new MessageQueueImpl(messageDao, callback);
     }
 
     @Override
@@ -178,16 +177,6 @@ public class PgmqManagerImpl implements PgmqManager {
 
     @Override
     public void unregisterHandler(MessageHandler messageHandler) {
-
-    }
-
-    @Override
-    public void registerCallback(MessageAvailableCallback callback) {
-        callbacks.add(Objects.requireNonNull(callback));
-    }
-
-    @Override
-    public void unregisterCallback(MessageAvailableCallback callback) {
 
     }
 }

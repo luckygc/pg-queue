@@ -14,9 +14,6 @@ public interface PgmqManager {
     void registerHandler(MessageHandler messageHandler);
     void unregisterHandler(MessageHandler messageHandler);
 
-    void registerCallback(MessageAvailableCallback callback);
-    void unregisterCallback(MessageAvailableCallback callback);
-
     void start();
 
     void stop();
