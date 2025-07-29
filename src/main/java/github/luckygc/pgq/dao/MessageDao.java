@@ -13,11 +13,11 @@ import org.springframework.jdbc.core.RowMapper;
 public class MessageDao {
 
     private static final String INSERT_INTO_PENDING = """
-            insert into pgq_pending_queue(create_time, topic, priority, payload, attempt)
+            insert into pgmq_pending_queue(create_time, topic, priority, payload, attempt)
                 values(?, ?, ?, ?, ?)
             """;
     private static final String INSERT_INTO_INVISIBLE = """
-            insert into pgq_invisible_queue(create_time, topic, priority, payload, attempt, visible_time)
+            insert into pgmq_invisible_queue(create_time, topic, priority, payload, attempt, visible_time)
                 values(?, ?, ?, ?, ?, ?)
             """;
 
@@ -85,15 +85,15 @@ public class MessageDao {
         String sql = """
                 with message_to_process as (
                     select id, create_time, topic, priority, payload, attempt
-                        from pgq_pending_queue
+                        from pgmq_pending_queue
                         where topic = ?
                         order by priority desc ,id
                         limit ?
                         for update skip locked
                 ), delete_from_pending as (
-                    delete from pgq_pending_queue where id in (select id from message_to_process)
+                    delete from pgmq_pending_queue where id in (select id from message_to_process)
                 ), insert_into_processing as (
-                    insert into pgq_processing_queue
+                    insert into pgmq_processing_queue
                               (id, create_time, topic, priority, payload, attempt, timeout_time)
                         select id, create_time, topic, priority, payload, attempt + 1, ? from message_to_process
                 ) select id, create_time, topic, priority, payload, attempt + 1 from message_to_process
@@ -105,7 +105,7 @@ public class MessageDao {
     public int deleteProcessingMessageById(Long id) {
         Objects.requireNonNull(id);
 
-        return jdbcTemplate.update("delete from pgq_processing_queue where id = ?", id);
+        return jdbcTemplate.update("delete from pgmq_processing_queue where id = ?", id);
     }
 
     public int moveProcessingMessageToDeadById(Long id) {
@@ -113,9 +113,9 @@ public class MessageDao {
 
         String sql = """
                 with message_to_dead as (
-                    delete from pgq_processing_queue where id = ?
+                    delete from pgmq_processing_queue where id = ?
                     returning id, create_time, topic, priority, payload, attempt
-                ) insert into pgq_dead_queue
+                ) insert into pgmq_dead_queue
                       (id, create_time, topic, priority, payload, attempt, dead_time)
                 select id, create_time, topic, priority, payload, attempt, now() from message_to_dead
                 """;
@@ -128,10 +128,10 @@ public class MessageDao {
 
         String sql = """
                 with message_to_retry as (
-                    delete from pgq_processing_queue where id = ?
+                    delete from pgmq_processing_queue where id = ?
                     returning id, create_time, topic, priority, payload, attempt
                 )
-                insert into pgq_pending_queue
+                insert into pgmq_pending_queue
                       (id, create_time, topic, priority, payload, attempt)
                 select id, create_time, topic, priority, payload, attempt from message_to_retry
                 """;
@@ -145,10 +145,10 @@ public class MessageDao {
 
         String sql = """
                 with message_to_retry as (
-                    delete from pgq_processing_queue where id = ?
+                    delete from pgmq_processing_queue where id = ?
                     returning id, create_time, topic, priority, payload, attempt
                 )
-                insert into pgq_invisible_queue
+                insert into pgmq_invisible_queue
                       (id, create_time, topic, priority, payload, attempt, visible_time)
                 select id, create_time, topic, priority, payload, attempt, ? from message_to_retry
                 """;
