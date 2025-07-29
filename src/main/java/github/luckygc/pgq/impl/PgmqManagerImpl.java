@@ -74,16 +74,13 @@ public class PgmqManagerImpl implements PgmqManager {
     }
 
     private void schedule() {
-        List<String> topics = queueDao.moveTimeoutAndVisibleMsgToPendingAndReturnMsgAvailableTopics();
+        List<String> topics = queueDao.moveTimeoutAndVisibleMsgToPendingAndReturnPendingTopics();
         if (topics.isEmpty()) {
             return;
         }
 
-        for (String topic : topics) {
-            messageProcessorDispatcher.dispatch(topic);
-            if (enablePgNotify) {
-                queueDao.sendNotify(topic);
-            }
+        if (pgNotifier != null) {
+            pgNotifier.sendNotify(topics);
         }
     }
 

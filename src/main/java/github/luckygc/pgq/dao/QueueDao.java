@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 public class QueueDao {
 
@@ -26,12 +25,8 @@ public class QueueDao {
     /**
      * 批量把到时间的不可见消息移入待处理队列,把处理超时任务重新移回待处理队列,并返回有可用消息的topic集合
      */
-    public List<String> moveTimeoutAndVisibleMsgToPendingAndReturnMsgAvailableTopics() {
+    public List<String> moveTimeoutAndVisibleMsgToPendingAndReturnPendingTopics() {
         return jdbcTemplate.query("select pgmq_move_timeout_and_visible_msg_to_pending_then_notify()", stringMapper);
-    }
-
-    public void sendNotifyWithCheckTx(String topic) {
-
     }
 
     public void sendNotify(String topic) {
@@ -55,6 +50,10 @@ public class QueueDao {
             rows.add(new Object[]{PgmqConstants.TOPIC_CHANNEL, topic});
         }
 
-        jdbcTemplate.query("select pg_notify(?, ?)", emptyMapper, rows);
+        try {
+            jdbcTemplate.query("select pg_notify(?, ?)", emptyMapper, rows);
+        } catch (Exception e) {
+            log.warn("发送通知失败", e);
+        }
     }
 }
