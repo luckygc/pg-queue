@@ -32,11 +32,11 @@ public class MessageProcessorDispatcher {
 
                 @Override
                 public void afterCommit() {
-                    messageProcessor.asyncProcess();
+                    tryProcess(messageProcessor);
                 }
             });
         } else {
-            messageProcessor.asyncProcess();
+            tryProcess(messageProcessor);
         }
     }
 
@@ -47,6 +47,14 @@ public class MessageProcessorDispatcher {
             } catch (Throwable t) {
                 log.error("关闭消息处理器失败", t);
             }
+        }
+    }
+
+    private void tryProcess(MessageProcessor processor) {
+        try {
+            processor.asyncProcess();
+        } catch (Throwable t) {
+            log.error("调度消息处理器失败", t);
         }
     }
 }
