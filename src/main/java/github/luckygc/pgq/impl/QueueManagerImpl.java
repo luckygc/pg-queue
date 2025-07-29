@@ -122,7 +122,7 @@ public class QueueManagerImpl implements QueueManager {
     }
 
     private void schedule() {
-        List<String> topics = queueManagerDao.tryHandleTimeoutAndVisibleMessagesAndReturnTopicsWithAvailableMessages();
+        List<String> topics = queueManagerDao.moveTimeoutAndVisibleMsgToPendingAndReturnMsgAvailableTopics();
         if (topics.isEmpty()) {
             return;
         }

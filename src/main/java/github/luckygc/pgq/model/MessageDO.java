@@ -21,7 +21,7 @@ public class MessageDO {
         this.priority = Objects.requireNonNullElse(builder.priority, PgmqConstants.MESSAGE_PRIORITY);
         this.topic = Objects.requireNonNull(builder.topic);
         this.payload = Objects.requireNonNull(builder.payload);
-        this.attempt = Objects.requireNonNullElse(builder.attempt, 0);
+        this.attempt = Objects.requireNonNull(builder.attempt);
     }
 
     public LocalDateTime getCreateTime() {

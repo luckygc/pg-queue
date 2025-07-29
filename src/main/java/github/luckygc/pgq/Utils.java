@@ -29,14 +29,4 @@ public class Utils {
             throw new IllegalArgumentException("maxPoll必须在1-5000之间");
         }
     }
-
-    public static Long[] getIdArray(List<Message> messages) {
-        Long[] ids = new Long[messages.size()];
-        int i = 0;
-        for (Message message : messages) {
-            ids[i++] = Objects.requireNonNull(message.getId());
-        }
-
-        return ids;
-    }
 }
