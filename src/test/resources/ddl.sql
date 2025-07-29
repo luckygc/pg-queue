@@ -8,12 +8,12 @@ drop table if exists pgmq_invisible_queue;
 create table pgmq_invisible_queue
 (
     id           bigint                            default nextval('pgmq_message_seq') primary key, -- 消息唯一标识
-    create_time  timestamp                not null default now(),                                    -- 消息创建时间
+    create_time  timestamp                not null default now(),                                   -- 消息创建时间
     topic        varchar(100) collate "C" not null,                                                 -- 消息主题/队列名称
     priority     int                      not null default 0,                                       -- 消息优先级，数值越大优先级越高
     payload      varchar collate "C"      not null,                                                 -- 消息内容/负载数据
     attempt      int                      not null default 0,                                       -- 重试次数
-    visible_time timestamp                not null                                                   -- 消息可见时间，到达此时间后消息才能被消费
+    visible_time timestamp                not null                                                  -- 消息可见时间，到达此时间后消息才能被消费
 );
 
 -- 为不可见队列的可见时间字段创建索引，用于快速查找到期的消息
@@ -34,7 +34,7 @@ drop table if exists pgmq_pending_queue;
 create table pgmq_pending_queue
 (
     id          bigint                            default nextval('pgmq_message_seq') primary key, -- 消息唯一标识
-    create_time timestamp                not null default now(),                                    -- 消息创建时间
+    create_time timestamp                not null default now(),                                   -- 消息创建时间
     topic       varchar(100) collate "C" not null,                                                 -- 消息主题/队列名称
     priority    int                      not null default 0,                                       -- 消息优先级，数值越大优先级越高
     payload     varchar collate "C"      not null,                                                 -- 消息内容/负载数据
@@ -61,13 +61,13 @@ COMMENT ON COLUMN pgmq_pending_queue.attempt IS '重试次数';
 drop table if exists pgmq_processing_queue;
 create table pgmq_processing_queue
 (
-    id           bigint primary key,                                                                -- 消息唯一标识
-    create_time  timestamp                not null,                                                 -- 消息创建时间
-    topic        varchar(100) collate "C" not null,                                                -- 消息主题/队列名称
-    priority     int                      not null default 0,                                      -- 消息优先级，数值越大优先级越高
-    payload      varchar collate "C"      not null,                                                -- 消息内容/负载数据
-    attempt      int                      not null,                                                -- 重试次数
-    timeout_time timestamp                not null                                                  -- 消息处理超时时间
+    id           bigint primary key,                          -- 消息唯一标识
+    create_time  timestamp                not null,           -- 消息创建时间
+    topic        varchar(100) collate "C" not null,           -- 消息主题/队列名称
+    priority     int                      not null default 0, -- 消息优先级，数值越大优先级越高
+    payload      varchar collate "C"      not null,           -- 消息内容/负载数据
+    attempt      int                      not null,           -- 重试次数
+    timeout_time timestamp                not null            -- 消息处理超时时间
 );
 
 -- 为处理中队列的超时时间字段创建索引，用于快速查找超时的消息
@@ -87,13 +87,13 @@ COMMENT ON COLUMN pgmq_processing_queue.timeout_time IS '消息处理超时时�
 drop table if exists pgmq_dead_queue;
 create table pgmq_dead_queue
 (
-    id          bigint primary key,                                                                -- 消息唯一标识
-    create_time timestamp                not null,                                                 -- 消息创建时间
-    topic       varchar(100) collate "C" not null,                                                -- 消息主题/队列名称
-    priority    int                      not null,                                                -- 消息优先级，数值越大优先级越高
-    payload     varchar collate "C"      not null,                                                -- 消息内容/负载数据
-    attempt     int                      not null,                                                -- 重试次数
-    dead_time   timestamp                not null                                                  -- 消息进入死信队列的时间
+    id          bigint primary key,                -- 消息唯一标识
+    create_time timestamp                not null, -- 消息创建时间
+    topic       varchar(100) collate "C" not null, -- 消息主题/队列名称
+    priority    int                      not null, -- 消息优先级，数值越大优先级越高
+    payload     varchar collate "C"      not null, -- 消息内容/负载数据
+    attempt     int                      not null, -- 重试次数
+    dead_time   timestamp                not null  -- 消息进入死信队列的时间
 );
 
 -- 为死信队列的主题字段创建索引，用于按主题查询死信消息
@@ -115,56 +115,56 @@ drop function if exists pgmq_move_timeout_and_visible_msg_to_pending_then_notify
 
 -- 消息队列核心处理函数：将超时和可见的消息移动到待处理队列并发送通知
 -- 返回值：包含有消息可用的主题列表
-CREATE FUNCTION pgmq_move_timeout_and_visible_msg_to_pending_then_notify()
-    RETURNS TABLE
-            (
-                _topic varchar(100)  -- 有消息可用的主题名称
-            )
+CREATE OR REPLACE FUNCTION pgmq_move_timeout_and_visible_msg_to_pending_then_notify()
+    RETURNS TABLE(_topic varchar(100))
     LANGUAGE plpgsql
-AS
-$$
+AS $$
+DECLARE
+    rec RECORD;
 BEGIN
-    -- 尝试获取咨询锁，防止并发执行
+    -- 1. 事务级咨询锁，防止并发执行
     IF NOT pg_try_advisory_xact_lock(1997, 38) THEN
-        RETURN;
+        RETURN;  -- 拿不到锁就空返回
     END IF;
 
-    -- 如果获取到锁，执行消息移动和通知逻辑，并返回所有有消息的主题
-    RETURN QUERY
-        WITH timeout_processing_messages AS (
-            -- 删除处理超时的消息并返回消息数据
-            DELETE FROM pgmq_processing_queue
-                WHERE timeout_time <= now()
-                RETURNING id, create_time, topic, priority, payload, attempt),
-             visible_messages AS (
-                 -- 删除已到可见时间的消息并返回消息数据
-                 DELETE FROM pgmq_invisible_queue
-                     WHERE visible_time <= now()
-                     RETURNING id, create_time, topic, priority, payload, attempt),
-             message_to_pending AS (
-                 -- 合并超时消息和可见消息
-                 SELECT id, create_time, topic, priority, payload, attempt
-                 FROM timeout_processing_messages
-                 UNION ALL
-                 SELECT id, create_time, topic, priority, payload, attempt
-                 FROM visible_messages),
-             insert_op AS (
-                 -- 将合并后的消息插入到待处理队列
-                 INSERT INTO pgmq_pending_queue (id, create_time, topic, priority, payload, attempt)
-                     SELECT id, create_time, topic, priority, payload, attempt
-                     FROM message_to_pending),
-             message_available_topics AS (
-                 -- 获取所有有消息的主题
-                 SELECT DISTINCT topic
-                 FROM pgmq_pending_queue),
-             _notify AS (
-                 -- 为每个有消息的主题发送通知
-                 SELECT pg_notify('pgmq_topic_channel', topic), topic
-                 FROM message_available_topics)
-        SELECT topic
-        FROM _notify;
+    -- 2. 原子性删除 processing_queue/invisible_queue 并插入 pending_queue，
+    --    同时通过 RETURNING 收集本次实际插入的 topic
+    FOR rec IN
+        WITH
+            moved_processing AS (
+                DELETE FROM pgmq_processing_queue
+                    WHERE timeout_time <= now()
+                    RETURNING id, create_time, topic, priority, payload, attempt
+            ),
+            moved_visible AS (
+                DELETE FROM pgmq_invisible_queue
+                    WHERE visible_time <= now()
+                    RETURNING id, create_time, topic, priority, payload, attempt
+            ),
+            moved AS (
+                SELECT * FROM moved_processing
+                UNION ALL
+                SELECT * FROM moved_visible
+            ),
+            insert_op AS (
+                INSERT INTO pgmq_pending_queue (id, create_time, topic, priority, payload, attempt)
+                    SELECT id, create_time, topic, priority, payload, attempt
+                    FROM moved
+                    RETURNING topic
+            )
+        SELECT DISTINCT topic
+        FROM insert_op
+        LOOP
+            -- 3. 对每个本次搬运的主题发送通知
+            PERFORM pg_notify('pgmq_topic_channel', rec.topic);
+            -- 4. 将主题作为返回值返回
+            _topic := rec.topic;
+            RETURN NEXT;
+        END LOOP;
+
+    -- 5. 如果没有任何搬运，则函数直接结束，返回空结果集
 END;
 $$;
 
--- 为函数添加注释
-COMMENT ON FUNCTION pgmq_move_timeout_and_visible_msg_to_pending_then_notify() IS '消息队列核心处理函数：将超时和可见的消息移动到待处理队列并发送通知，返回有消息可用的主题列表';
+COMMENT ON FUNCTION pgmq_move_timeout_and_visible_msg_to_pending_then_notify()
+    IS '将超时和可见的消息原子地移入 pending_queue，仅对本次搬运的主题发送 pg_notify，并返回这些主题列表';
