@@ -2,7 +2,7 @@ package github.luckygc.pgq.impl;
 
 import github.luckygc.pgq.tool.MessageProcessorDispatcher;
 import github.luckygc.pgq.tool.PgNotifier;
-import github.luckygc.pgq.PgmqConstants;
+import github.luckygc.pgq.model.PgmqConstants;
 import github.luckygc.pgq.tool.Checker;
 import github.luckygc.pgq.api.DelayMessageQueue;
 import github.luckygc.pgq.api.MessageQueue;

@@ -1,6 +1,6 @@
 package github.luckygc.pgq.dao;
 
-import github.luckygc.pgq.PgmqConstants;
+import github.luckygc.pgq.model.PgmqConstants;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
