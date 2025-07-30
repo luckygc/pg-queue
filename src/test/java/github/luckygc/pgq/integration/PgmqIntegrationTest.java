@@ -240,4 +240,83 @@ class PgmqIntegrationTest extends BaseIntegrationTest {
         assertThat(completed).isTrue();
         assertThat(processedCount.get()).isEqualTo(messageCount);
     }
+
+    @Test
+    @DisplayName("应该能够处理空消息和特殊字符")
+    void shouldHandleEmptyAndSpecialCharacterMessages() {
+        String topic = "special-topic";
+
+        // 测试空字符串
+        pgmqManager.queue().send(topic, "");
+        Message emptyMessage = pgmqManager.queue().poll(topic);
+        assertThat(emptyMessage).isNotNull();
+        assertThat(emptyMessage.getPayload()).isEqualTo("");
+        emptyMessage.delete();
+
+        // 测试特殊字符
+        String specialPayload = "特殊字符测试: !@#$%^&*()_+{}|:<>?[]\\;'\",./ 中文 🚀 \n\t\r";
+        pgmqManager.queue().send(topic, specialPayload);
+        Message specialMessage = pgmqManager.queue().poll(topic);
+        assertThat(specialMessage).isNotNull();
+        assertThat(specialMessage.getPayload()).isEqualTo(specialPayload);
+        specialMessage.delete();
+
+        // 测试长消息
+        String longPayload = "x".repeat(10000);
+        pgmqManager.queue().send(topic, longPayload);
+        Message longMessage = pgmqManager.queue().poll(topic);
+        assertThat(longMessage).isNotNull();
+        assertThat(longMessage.getPayload()).isEqualTo(longPayload);
+        longMessage.delete();
+    }
+
+    @Test
+    @DisplayName("应该能够处理消息处理器异常")
+    void shouldHandleMessageHandlerExceptions() throws InterruptedException {
+        String topic = "exception-topic";
+        AtomicInteger processedCount = new AtomicInteger(0);
+        AtomicInteger exceptionCount = new AtomicInteger(0);
+        CountDownLatch latch = new CountDownLatch(3);
+
+        MessageHandler handler = new MessageHandler() {
+            @Override
+            public String topic() {
+                return topic;
+            }
+
+            @Override
+            public void handle(Message message) {
+                try {
+                    processedCount.incrementAndGet();
+                    if (message.getPayload().contains("error")) {
+                        exceptionCount.incrementAndGet();
+                        throw new RuntimeException("模拟处理异常");
+                    }
+                    message.delete();
+                } catch (Exception e) {
+                    // 异常处理逻辑
+                    if (message.getAttempt() >= 3) {
+                        message.dead();
+                    } else {
+                        message.retry();
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            }
+        };
+
+        pgmqManager.registerHandler(handler);
+
+        // 发送正常消息和异常消息
+        pgmqManager.queue().send(topic, "normal message");
+        pgmqManager.queue().send(topic, "error message");
+        pgmqManager.queue().send(topic, "another normal");
+
+        boolean completed = latch.await(10, TimeUnit.SECONDS);
+        assertThat(completed).isTrue();
+        // 异常总共尝试3次，其他的各一次
+        assertThat(processedCount.get()).isEqualTo(5);
+        assertThat(exceptionCount.get()).isEqualTo(3);
+    }
 }
