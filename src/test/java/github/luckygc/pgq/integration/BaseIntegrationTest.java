@@ -19,7 +19,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 public abstract class BaseIntegrationTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15")
+    protected static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15")
             .withDatabaseName("test")
             .withUsername("test")
             .withPassword("test")
