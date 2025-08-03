@@ -1,5 +1,7 @@
 # pg-queue
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/luckygc/pg-queue)
+
 基于PostgreSQL的轻量级消息队列库，提供延时消息、优先级队列和重试机制。支持集群
 
 ## 特性
